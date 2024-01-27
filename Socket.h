@@ -17,9 +17,9 @@ public:
     Socket(const Socket& rhs) = delete;
     Socket& operator=(const Socket& rhs) = delete;
 
-    Socket();
-    Socket(SOCKET hSocket);
-    Socket(Socket&& rhs);
+    Socket() noexcept;
+    Socket(SOCKET hSocket) noexcept;
+    Socket(Socket&& rhs) noexcept;
     ~Socket();
 
     inline operator SOCKET() { return this->hSocket_; }

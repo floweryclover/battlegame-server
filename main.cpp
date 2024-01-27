@@ -21,6 +21,7 @@
 #include <sys/ioctl.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
+#include <cerrno>
 #endif
 
 enum class IOResult
@@ -75,8 +76,13 @@ int main(int argc, char* argv[])
             {
                 if (ioReturnValue < 0)
                 {
+#ifdef _WIN32
                     outErrorCode = WSAGetLastError();
                     if (outErrorCode == WSAEWOULDBLOCK)
+#elifdef linux
+                    outErrorCode = errno;
+                    if (outErrorCode == EWOULDBLOCK)
+#endif
                     {
                         return IOResult::WOULD_BLOCK;
                     }
@@ -105,8 +111,13 @@ int main(int argc, char* argv[])
         Socket clientSocket(accept(listenSocket, nullptr, nullptr));
         if (clientSocket == INVALID_SOCKET)
         {
+#ifdef _WIN32
             errorCode = WSAGetLastError();
             assert(errorCode == WSAEWOULDBLOCK);
+#elifdef linux
+            errorCode = errno;
+            assert(errorCode == EWOULDBLOCK);
+#endif
         }
         else
         {

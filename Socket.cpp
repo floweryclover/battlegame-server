@@ -3,12 +3,13 @@
 //
 
 #include "Socket.h"
+#include "Constants.h"
 #include <cassert>
 #ifdef _WIN32
 #include <WinSock2.h>
 #elifdef linux
+#include <unistd.h>
 #include <sys/socket.h>
-#define INVALID_SOCKET -1
 #endif
 
 Socket::Socket() noexcept : hSocket_(INVALID_SOCKET) {}
