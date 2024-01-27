@@ -5,16 +5,26 @@
 #ifndef BATTLEGAME_SERVER_SOCKET_H
 #define BATTLEGAME_SERVER_SOCKET_H
 
+#ifdef _WIN32
+using UINT_PTR = unsigned long long;
+using SOCKET = UINT_PTR;
+#elifdef linux
+using SOCKET = int;
+#endif
 
 class Socket {
 public:
-    Socket(int hSocket);
     Socket(const Socket& rhs) = delete;
+    Socket& operator=(const Socket& rhs) = delete;
+
+    Socket();
+    Socket(SOCKET hSocket);
+    Socket(Socket&& rhs);
     ~Socket();
 
-    inline operator int() { return this->hSocket_; }
+    inline operator SOCKET() { return this->hSocket_; }
 private:
-    int hSocket_;
+    SOCKET hSocket_;
 };
 
 

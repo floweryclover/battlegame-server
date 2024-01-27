@@ -8,4 +8,9 @@ add_executable(battlegame_server main.cpp
         Socket.cpp
         Socket.h
         Wsa.cpp
-        Wsa.h)
+        Wsa.h
+        Message.cpp
+        Message.h
+        Client.cpp
+        Client.h
+        Constants.h)

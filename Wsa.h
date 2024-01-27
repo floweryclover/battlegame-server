@@ -16,5 +16,5 @@ public:
 };
 
 
-#endif //BATTLEGAME_SERVER_WSA_H
-#endif
+#endif // _WIN32
+#endif // BATTLEGAME_SERVER_WSA_H
