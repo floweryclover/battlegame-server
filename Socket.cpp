@@ -6,6 +6,8 @@
 #include <cassert>
 #ifdef _WIN32
 #include <WinSock2.h>
+#elifdef linux
+#include <sys/socket.h>
 #endif
 
 Socket::Socket(int hSocket) : hSocket_(hSocket)
@@ -15,8 +17,11 @@ Socket::Socket(int hSocket) : hSocket_(hSocket)
 
 Socket::~Socket()
 {
-    shutdown(hSocket_, SD_SEND);
+
 #ifdef _WIN32
+    shutdown(hSocket_, SD_SEND);
     closesocket(hSocket_);
+#elifdef linux
+    shutdown(hSocket_, SHUT_WR);
 #endif
 }
