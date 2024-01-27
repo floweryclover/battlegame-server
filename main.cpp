@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cassert>
 #include <cstring>
+
 #include "Socket.h"
 
 #ifdef _WIN32
@@ -8,6 +9,9 @@
 #include <ws2tcpip.h>
 #include "Wsa.h"
 #pragma comment(lib, "ws2_32.lib")
+#elifdef linux
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #endif
 
 int main(int argc, char* argv[])
@@ -19,6 +23,7 @@ int main(int argc, char* argv[])
     }
 #ifdef _WIN32
     Wsa wsa;
+    SetConsoleOutputCP(CP_UTF8);
 #endif
     Socket listenSocket(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
 
@@ -31,25 +36,54 @@ int main(int argc, char* argv[])
     result = bind(listenSocket, (struct sockaddr*)&sockAddrIn, sizeof(sockAddrIn));
     assert(result != -1);
 
-    result = listen(static_cast<SOCKET>(listenSocket), 8);
+    result = listen(listenSocket, 8);
     assert(result != -1);
 
     Socket clientSocket(accept(listenSocket, nullptr, nullptr));
     assert(clientSocket != -1);
 
-    int headerType = 0;
-    int headerBodySize = 14;
-    const char* msg = "Hello Client!";
-    send(clientSocket, reinterpret_cast<char*>(&headerType), 4, 0);
-    send(clientSocket, reinterpret_cast<char*>(&headerBodySize), 4, 0);
-    send(clientSocket, msg, 14, 0);
+    int bytesTransferred = 0;
+    int headerBodySize;
+    while (bytesTransferred < 4)
+    {
+        result = recv(clientSocket, reinterpret_cast<char*>(&headerBodySize + bytesTransferred), 4-bytesTransferred, 0);
+        assert(result != -1);
+        if (result == 0)
+        {
+            return 1;
+        }
+        bytesTransferred += result;
+    }
+    std::cout << "HeaderBodySize: " << headerBodySize << std::endl;
 
-    headerType = 0;
-    headerBodySize = 11;
-    msg = "Hi Client!";
-    send(clientSocket, reinterpret_cast<char*>(&headerType), 4, 0);
-    send(clientSocket, reinterpret_cast<char*>(&headerBodySize), 4, 0);
-    send(clientSocket, msg, 11, 0);
+    bytesTransferred = 0;
+    int headerMessageType;
+    while (bytesTransferred < 4)
+    {
+        result = recv(clientSocket, reinterpret_cast<char*>(&headerMessageType + bytesTransferred), 4-bytesTransferred, 0);
+        assert(result != -1);
+        if (result == 0)
+        {
+            return 1;
+        }
+        bytesTransferred += result;
+    }
+    std::cout << "HeaderMessageType: " << headerMessageType << std::endl;
+
+    bytesTransferred = 0;
+    char* nickname = new char[headerBodySize];
+    while (bytesTransferred < headerBodySize)
+    {
+        result = recv(clientSocket, reinterpret_cast<char*>(nickname + bytesTransferred), headerBodySize-bytesTransferred, 0);
+        assert(result != -1);
+        if (result == 0)
+        {
+            return 1;
+        }
+        bytesTransferred += result;
+    }
+    std::wcout << "nickname: " << nickname << std::endl;
+    delete[] nickname;
 
     return 0;
 }

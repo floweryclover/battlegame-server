@@ -1,7 +1,7 @@
 //
 // Created by floweryclover on 2024-01-25.
 //
-
+#ifdef _WIN32
 #include "Wsa.h"
 #include <cassert>
 #include <WinSock2.h>
@@ -21,3 +21,4 @@ Wsa::~Wsa()
 {
     WSACleanup();
 }
+#endif

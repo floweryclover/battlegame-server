@@ -5,6 +5,7 @@
 #ifndef BATTLEGAME_SERVER_WSA_H
 #define BATTLEGAME_SERVER_WSA_H
 
+#ifdef _WIN32
 
 class Wsa {
 private:
@@ -16,3 +17,4 @@ public:
 
 
 #endif //BATTLEGAME_SERVER_WSA_H
+#endif
