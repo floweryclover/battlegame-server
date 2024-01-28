@@ -12,29 +12,29 @@
 #include <sys/socket.h>
 #endif
 
-Socket::Socket() noexcept : hSocket_(INVALID_SOCKET) {}
+Socket::Socket() noexcept : mSocketHandle(INVALID_SOCKET) {}
 
-Socket::Socket(SOCKET hSocket) noexcept : hSocket_(hSocket) {}
+Socket::Socket(SOCKET hSocket) noexcept : mSocketHandle(hSocket) {}
 
 
 Socket::Socket(Socket &&rhs) noexcept
 {
-    this->hSocket_ = rhs.hSocket_;
-    rhs.hSocket_ = INVALID_SOCKET;
+    this->mSocketHandle = rhs.mSocketHandle;
+    rhs.mSocketHandle = INVALID_SOCKET;
 }
 
 Socket::~Socket()
 {
-    if (hSocket_ != INVALID_SOCKET)
+    if (mSocketHandle != INVALID_SOCKET)
     {
 #ifdef _WIN32
-        shutdown(hSocket_, SD_SEND);
-        closesocket(hSocket_);
+        shutdown(mSocketHandle, SD_SEND);
+        closesocket(mSocketHandle);
 #elifdef linux
-        shutdown(hSocket_, SHUT_WR);
-        close(hSocket_);
+        shutdown(mSocketHandle, SHUT_WR);
+        close(mSocketHandle);
 #endif
-        hSocket_ = INVALID_SOCKET;
+        mSocketHandle = INVALID_SOCKET;
     }
 }
 

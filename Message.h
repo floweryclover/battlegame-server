@@ -16,10 +16,10 @@ class Client;
 
 class Message {
 public:
-    Client* to;
-    int headerBodySize;
-    int headerType;
-    std::unique_ptr<char> body;
+    Client* mTo;
+    int mHeaderBodySize;
+    int mHeaderType;
+    std::unique_ptr<char> mBodyBuffer;
 };
 
 

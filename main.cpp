@@ -136,20 +136,20 @@ int main(int argc, char* argv[])
         if (!sendQueue.empty())
         {
             Message& message = sendQueue.front();
-            if (message.to == nullptr)
+            if (message.mTo == nullptr)
             {
                 sendQueue.pop();
             }
             else
             {
-                char* pSendBuffer = (currentSent < HEADER_SIZE ? reinterpret_cast<char*>(&message) : message.body.get()) + currentSent;
-                int lengthToSend = (currentSent < HEADER_SIZE ? HEADER_SIZE : message.headerBodySize) - currentSent;
-                result = send(message.to->GetSocketHandle(), pSendBuffer, lengthToSend, 0);
+                char* pSendBuffer = (currentSent < HEADER_SIZE ? reinterpret_cast<char*>(&message) : message.mBodyBuffer.get()) + currentSent;
+                int lengthToSend = (currentSent < HEADER_SIZE ? HEADER_SIZE : message.mHeaderBodySize) - currentSent;
+                result = send(message.mTo->GetSocketHandle(), pSendBuffer, lengthToSend, 0);
                 switch (handleResult(result, errorCode))
                 {
                     case IOResult::SUCCESSFUL:
                         currentSent += result;
-                        if (currentSent == HEADER_SIZE + message.headerBodySize)
+                        if (currentSent == HEADER_SIZE + message.mHeaderBodySize)
                         {
                             currentSent = 0;
                             sendQueue.pop();
@@ -157,10 +157,10 @@ int main(int argc, char* argv[])
                     case IOResult::WOULD_BLOCK:
                         break;
                     case IOResult::FATAL_ERROR:
-                        std::cerr << "[에러] 클라이언트 " << message.to->GetConnectionId() << "에게 데이터를 전송하던 도중 에러가 발생하였습니다: 에러 코드" << errorCode << "." << std::endl;
+                        std::cerr << "[에러] 클라이언트 " << message.mTo->GetConnectionId() << "에게 데이터를 전송하던 도중 에러가 발생하였습니다: 에러 코드" << errorCode << "." << std::endl;
                     case IOResult::DISCONNECTED:
-                        std::cout << "[접속 해제] 클라이언트 " << message.to->GetConnectionId() << std::endl;
-                        clients.erase(message.to->GetConnectionId());
+                        std::cout << "[접속 해제] 클라이언트 " << message.mTo->GetConnectionId() << std::endl;
+                        clients.erase(message.mTo->GetConnectionId());
                         currentSent = 0;
                         sendQueue.pop();
                         break;
@@ -177,26 +177,26 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            char* pReceiveBuffer = pClient->receiveBuffer + pClient->currentReceived;
-            int sizeToReceive = pClient->totalSizeToReceive - pClient->currentReceived;
+            char* pReceiveBuffer = pClient->mReceiveBuffer + pClient->mCurrentReceived;
+            int sizeToReceive = pClient->mTotalSizeToReceive - pClient->mCurrentReceived;
             result = recv(pClient->GetSocketHandle(), pReceiveBuffer, sizeToReceive, 0);
             switch (handleResult(result, errorCode))
             {
                 case IOResult::SUCCESSFUL:
-                    pClient->currentReceived += result;
-                    if (pClient->currentReceived == pClient->totalSizeToReceive)
+                    pClient->mCurrentReceived += result;
+                    if (pClient->mCurrentReceived == pClient->mTotalSizeToReceive)
                     {
-                        if (pClient->totalSizeToReceive == HEADER_SIZE)
+                        if (pClient->mTotalSizeToReceive == HEADER_SIZE)
                         {
-                            memcpy(&pClient->totalSizeToReceive, pClient->receiveBuffer, 4);
-                            memcpy(&pClient->receivingHeaderType, pClient->receiveBuffer+4, 4);
+                            memcpy(&pClient->mTotalSizeToReceive, pClient->mReceiveBuffer, 4);
+                            memcpy(&pClient->mLastReceivedHeaderType, pClient->mReceiveBuffer + 4, 4);
                         }
                         else
                         {
                             ctsRpc.HandleMessage(*pClient);
-                            pClient->totalSizeToReceive = HEADER_SIZE;
+                            pClient->mTotalSizeToReceive = HEADER_SIZE;
                         }
-                        pClient->currentReceived = 0;
+                        pClient->mCurrentReceived = 0;
                     }
                 case IOResult::WOULD_BLOCK:
                     break;

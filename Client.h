@@ -16,16 +16,16 @@ public:
     Client(Client&& rhs) noexcept;
     ~Client();
 
-    inline int GetConnectionId() const { return this->connectionId_; }
-    inline SOCKET GetSocketHandle() { return this->socket_.operator SOCKET(); }
+    inline int GetConnectionId() const { return this->mConnectionId; }
+    inline SOCKET GetSocketHandle() { return this->mSocket.operator SOCKET(); }
 
-    int currentReceived;
-    int totalSizeToReceive;
-    int receivingHeaderType;
-    char receiveBuffer[MAX_MESSAGE_SIZE];
+    int mCurrentReceived;
+    int mTotalSizeToReceive;
+    int mLastReceivedHeaderType;
+    char mReceiveBuffer[MAX_MESSAGE_SIZE];
 private:
-    int connectionId_;
-    Socket socket_;
+    int mConnectionId;
+    Socket mSocket;
 };
 
 

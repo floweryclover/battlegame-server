@@ -6,15 +6,15 @@
 #include <utility>
 #include <cstring>
 
-Client::Client(int connectionId, Socket&& socket) noexcept : connectionId_(connectionId), socket_(std::move(socket))
+Client::Client(int connectionId, Socket&& socket) noexcept : mConnectionId(connectionId), mSocket(std::move(socket))
 {
-    this->currentReceived = 0;
-    this->totalSizeToReceive = HEADER_SIZE;
-    this->receivingHeaderType = 0;
-    memset(this->receiveBuffer, 0, MAX_MESSAGE_SIZE);
+    this->mCurrentReceived = 0;
+    this->mTotalSizeToReceive = HEADER_SIZE;
+    this->mLastReceivedHeaderType = 0;
+    memset(this->mReceiveBuffer, 0, MAX_MESSAGE_SIZE);
 }
 
-Client::Client(Client&& rhs) noexcept : Client(rhs.connectionId_, std::move(rhs.socket_))
+Client::Client(Client&& rhs) noexcept : Client(rhs.mConnectionId, std::move(rhs.mSocket))
 {
 }
 

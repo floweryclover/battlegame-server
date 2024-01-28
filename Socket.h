@@ -22,9 +22,9 @@ public:
     Socket(Socket&& rhs) noexcept;
     ~Socket();
 
-    inline operator SOCKET() { return this->hSocket_; }
+    inline operator SOCKET() { return this->mSocketHandle; }
 private:
-    SOCKET hSocket_;
+    SOCKET mSocketHandle;
 };
 
 

@@ -8,10 +8,10 @@
 void CtsRpc::HandleMessage(const Client& whose) const
 {
     // Client와 context를 분리할 수 있다면?
-    switch (whose.receivingHeaderType)
+    switch (whose.mLastReceivedHeaderType)
     {
         case CtsRpc::LOGIN:
-            OnLogin(whose, std::string(whose.receiveBuffer, whose.totalSizeToReceive));
+            OnLogin(whose, std::string(whose.mReceiveBuffer, whose.mTotalSizeToReceive));
             break;
     }
 }
