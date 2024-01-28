@@ -13,4 +13,10 @@ add_executable(battlegame_server main.cpp
         Message.h
         Client.cpp
         Client.h
-        Constants.h)
+        Constants.h
+        StcRpc.h
+        StcRpc.cpp
+        CtsRpc.h
+        CtsRpc.cpp
+        Context.h
+        Context.cpp)

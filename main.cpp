@@ -10,6 +10,8 @@
 #include "Socket.h"
 #include "Client.h"
 #include "Constants.h"
+#include "CtsRpc.h"
+#include "StcRpc.h"
 
 #ifdef _WIN32
 #include <WinSock2.h>
@@ -101,6 +103,8 @@ int main(int argc, char* argv[])
                 }
             };
 
+    CtsRpc ctsRpc;
+    StcRpc stcRpc;
     int errorCode;
     std::queue<Message> sendQueue;
     std::map<unsigned int, std::unique_ptr<Client>> clients;
@@ -189,6 +193,7 @@ int main(int argc, char* argv[])
                         }
                         else
                         {
+                            ctsRpc.HandleMessage(*pClient);
                             pClient->totalSizeToReceive = HEADER_SIZE;
                         }
                         pClient->currentReceived = 0;
