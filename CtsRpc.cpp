@@ -3,19 +3,21 @@
 //
 
 #include "CtsRpc.h"
+#include "StcRpc.h"
 #include <iostream>
 
 void CtsRpc::HandleMessage(const Context& context, const Message& message) const
 {
     switch (message.mHeaderMessageType)
     {
-        case CtsRpc::LOGIN:
-            OnLogin(context, std::string(message.mBodyBuffer, message.mHeaderBodySize));
+        case CtsRpc::CTS_REQUEST_JOIN_GAME:
+            RequestJoinGame(context);
             break;
     }
 }
 
-void CtsRpc::OnLogin(const Context& context, std::string&& nickname) const
+void CtsRpc::RequestJoinGame(Context context) const
 {
-    std::cout << "클라이언트 " << context.GetConnectionId() << " 닉네임 설정: " << nickname << std::endl;
+    std::cout << "Hello!" << std::endl;
+    mpStcRpc->Test();
 }

@@ -15,16 +15,9 @@
 #include <cerrno>
 #endif
 
-Client::Client(int connectionId, Socket&& socket) noexcept : mConnectionId(connectionId), mSocket(std::move(socket))
-{
-    this->mCurrentReceived = 0;
-    this->mTotalSizeToReceive = HEADER_SIZE;
-    this->mLastReceivedHeaderType = 0;
-}
+Client::Client(int connectionId, Socket&& socket) noexcept : mConnectionId(connectionId), mSocket(std::move(socket)), mIsReceivingHeader(true), mCurrentReceived(0), mTotalSizeToReceive(HEADER_SIZE), mLastReceivedHeaderType(0){}
 
-Client::Client(Client&& rhs) noexcept : Client(rhs.mConnectionId, const_cast<Socket&&>(std::move(rhs.mSocket)))
-{
-}
+Client::Client(Client&& rhs) noexcept : Client(rhs.mConnectionId, const_cast<Socket&&>(std::move(rhs.mSocket))){}
 
 std::expected<std::optional<std::unique_ptr<Message>>, std::optional<ErrorCode>> Client::Receive() {
     int sizeToReceive = mTotalSizeToReceive - mCurrentReceived;
@@ -51,16 +44,29 @@ std::expected<std::optional<std::unique_ptr<Message>>, std::optional<ErrorCode>>
         if (mCurrentReceived == mTotalSizeToReceive)
         {
             mCurrentReceived = 0;
-            if (mTotalSizeToReceive == HEADER_SIZE)
+            if (mIsReceivingHeader)
             {
                 memcpy(&mTotalSizeToReceive, mReceiveBuffer.data(), 4);
                 memcpy(&mLastReceivedHeaderType, mReceiveBuffer.data() + 4, 4);
-                return std::nullopt;
+
+                if (mTotalSizeToReceive == 0) // 바디 없는 메시지
+                {
+                    std::unique_ptr<Message> pMessage(new Message(0, mLastReceivedHeaderType, nullptr));
+                    mTotalSizeToReceive = HEADER_SIZE;
+                    mIsReceivingHeader = true;
+                    return pMessage;
+                }
+                else
+                {
+                    mIsReceivingHeader = false;
+                    return std::nullopt;
+                }
             }
             else
             {
                 std::unique_ptr<Message> pMessage(new Message(mTotalSizeToReceive, mLastReceivedHeaderType, mReceiveBuffer.data()));
                 mTotalSizeToReceive = HEADER_SIZE;
+                mIsReceivingHeader = true;
                 return pMessage;
             }
         }

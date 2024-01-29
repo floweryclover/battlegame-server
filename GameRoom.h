@@ -14,8 +14,14 @@ public:
     GameRoom(GameRoom&& rhs) noexcept;
     ~GameRoom() = default;
 
+    inline bool IsEmpty() const { return mCurrentPlayerCount == 0; }
+    inline bool IsFull() const { return mMaxPlayerCount == mCurrentPlayerCount; }
+    inline unsigned short GetFreePlayerSlotCount() const { return mMaxPlayerCount - mCurrentPlayerCount; }
+
 private:
     unsigned const int mRoomId;
+    unsigned short mMaxPlayerCount;
+    unsigned short mCurrentPlayerCount;
 };
 
 

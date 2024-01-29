@@ -100,15 +100,32 @@ int main(int argc, char* argv[])
                 }
             };
 
-    CtsRpc ctsRpc;
-    StcRpc stcRpc;
+
     int errorCode;
     std::queue<std::pair<int, Message>> sendQueue;
     std::map<unsigned int, std::unique_ptr<Client>> clients;
     unsigned int clientNumber = 0;
     int currentSent = 0;
-
+    StcRpc stcRpc(
+            [&sendQueue](int targetConnectionId, Message&& message)
+            {
+                std::cout << "AA" << std::endl;
+                sendQueue.emplace(targetConnectionId, message);
+            }
+    );
+    CtsRpc ctsRpc(&stcRpc);
     std::map<unsigned int, std::unique_ptr<GameRoom>> gameRooms;
+    auto getFirstJoinableGameRoomId = [](const std::map<unsigned int, std::unique_ptr<GameRoom>>& rooms) -> std::optional<unsigned int>
+    {
+        for (const auto& roomPair : rooms)
+        {
+            if (!(roomPair.second->IsFull()))
+            {
+                return roomPair.first;
+            }
+        }
+        return std::nullopt;
+    };
 
     while (true)
     {
@@ -135,13 +152,16 @@ int main(int argc, char* argv[])
 
         if (!sendQueue.empty())
         {
+            std::cout << "D" << std::endl;
             auto& messagePair = sendQueue.front();
             if (clients.find(messagePair.first) == clients.end())
             {
+                std::cout << "A" << std::endl;
                 sendQueue.pop();
             }
             else
             {
+                std::cout << "B" << std::endl;
                 const Client* const pTargetClient = clients[messagePair.first].get();
                 const Message& message = messagePair.second;
 
@@ -196,7 +216,9 @@ int main(int argc, char* argv[])
                 }
                 std::cout << "[접속 해제] 클라이언트 " << pClient->GetConnectionId() << std::endl;
                 clients.erase(iter++);
+                continue;
             }
+            iter++;
         }
     }
 

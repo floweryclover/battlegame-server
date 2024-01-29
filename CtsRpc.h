@@ -10,13 +10,18 @@
 #include "Client.h"
 #include "Message.h"
 
+class StcRpc;
+
 class CtsRpc {
 public:
+    CtsRpc(const StcRpc* const pStcRpc) : mpStcRpc(pStcRpc) {}
+    ~CtsRpc() = default;
     void HandleMessage(const Context& context, const Message& message) const;
 
-    static constexpr int LOGIN = 1;
+    static constexpr int CTS_REQUEST_JOIN_GAME = 1;
 private:
-    void OnLogin(const Context& context, std::string&& nickname) const;
+    void RequestJoinGame(Context context) const;
+    const StcRpc* const mpStcRpc;
 };
 
 

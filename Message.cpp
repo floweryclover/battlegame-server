@@ -4,15 +4,28 @@
 
 #include "Message.h"
 #include <cstring>
+#include <cassert>
 
 Message::Message(const int headerBodySize, const int headerMessageType, const char* const bodyOnlySource) : mHeaderBodySize(headerBodySize), mHeaderMessageType(headerMessageType)
 {
-    mBodyBuffer = new char[mHeaderBodySize];
-    memcpy(mBodyBuffer, bodyOnlySource, headerBodySize);
+    if (headerBodySize > 0)
+    {
+        assert(bodyOnlySource != nullptr);
+        mBodyBuffer = new char[mHeaderBodySize];
+        memcpy(mBodyBuffer, bodyOnlySource, headerBodySize);
+    }
+    else
+    {
+        assert(bodyOnlySource == nullptr);
+        mBodyBuffer = nullptr;
+    }
 }
 
 Message::~Message()
 {
-    delete[] mBodyBuffer;
+    if (mBodyBuffer != nullptr)
+    {
+        delete[] mBodyBuffer;
+    }
 }
 

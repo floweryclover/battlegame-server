@@ -40,6 +40,7 @@ private:
     int mCurrentReceived;
     int mTotalSizeToReceive;
     int mLastReceivedHeaderType;
+    bool mIsReceivingHeader;
     std::array<char, MAX_MESSAGE_SIZE> mReceiveBuffer;
 };
 
