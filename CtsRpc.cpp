@@ -5,18 +5,17 @@
 #include "CtsRpc.h"
 #include <iostream>
 
-void CtsRpc::HandleMessage(const Client& whose) const
+void CtsRpc::HandleMessage(const Context& context, const Message& message) const
 {
-    // Client와 context를 분리할 수 있다면?
-    switch (whose.mLastReceivedHeaderType)
+    switch (message.mHeaderMessageType)
     {
         case CtsRpc::LOGIN:
-            OnLogin(whose, std::string(whose.mReceiveBuffer, whose.mTotalSizeToReceive));
+            OnLogin(context, std::string(message.mBodyBuffer, message.mHeaderBodySize));
             break;
     }
 }
 
-void CtsRpc::OnLogin(const Client& from, std::string&& nickname) const
+void CtsRpc::OnLogin(const Context& context, std::string&& nickname) const
 {
-    std::cout << "클라이언트 " << from.GetConnectionId() << " 닉네임 설정: " << nickname << std::endl;
+    std::cout << "클라이언트 " << context.GetConnectionId() << " 닉네임 설정: " << nickname << std::endl;
 }

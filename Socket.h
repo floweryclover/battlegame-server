@@ -17,12 +17,12 @@ public:
     Socket(const Socket& rhs) = delete;
     Socket& operator=(const Socket& rhs) = delete;
 
-    Socket() noexcept;
-    Socket(SOCKET hSocket) noexcept;
+    explicit Socket() noexcept;
+    explicit Socket(SOCKET hSocket) noexcept;
     Socket(Socket&& rhs) noexcept;
     ~Socket();
 
-    inline operator SOCKET() { return this->mSocketHandle; }
+    inline SOCKET AsHandle() const { return this->mSocketHandle; }
 private:
     SOCKET mSocketHandle;
 };

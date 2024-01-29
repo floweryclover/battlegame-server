@@ -19,4 +19,5 @@ add_executable(battlegame_server main.cpp
         CtsRpc.h
         CtsRpc.cpp
         Context.h
-        Context.cpp)
+        Context.cpp
+        IoResult.h)

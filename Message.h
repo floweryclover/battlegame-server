@@ -7,19 +7,13 @@
 
 #include <memory>
 
-#ifdef _WIN32
-#elifdef linux
-using SOCKET = int;
-#endif
-
-class Client;
-
 class Message {
 public:
-    Client* mTo;
+    Message(const int headerBodySize, const int headerMessageType, const char* const bodyOnlySource);
+    ~Message();
     int mHeaderBodySize;
-    int mHeaderType;
-    std::unique_ptr<char> mBodyBuffer;
+    int mHeaderMessageType;
+    char* mBodyBuffer;
 };
 
 
