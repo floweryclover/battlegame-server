@@ -13,6 +13,7 @@
 #include "CtsRpc.h"
 #include "StcRpc.h"
 #include "Context.h"
+#include "GameRoom.h"
 
 #ifdef _WIN32
 #include <WinSock2.h>
@@ -51,10 +52,13 @@ int main(int argc, char* argv[])
     SetConsoleOutputCP(CP_UTF8);
 #endif
     Socket listenSocket(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+    int option = 1;
+    int result = setsockopt(listenSocket.AsHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    assert(result != -1);
 
     struct sockaddr_in sockAddrIn {};
     memset(&sockAddrIn, 0, sizeof(struct sockaddr_in));
-    int result = inet_pton(AF_INET, argv[1], &sockAddrIn.sin_addr);
+    result = inet_pton(AF_INET, argv[1], &sockAddrIn.sin_addr);
     assert(result == 1);
     sockAddrIn.sin_family = AF_INET;
     sockAddrIn.sin_port = htons(atoi(argv[2]));
@@ -103,6 +107,9 @@ int main(int argc, char* argv[])
     std::map<unsigned int, std::unique_ptr<Client>> clients;
     unsigned int clientNumber = 0;
     int currentSent = 0;
+
+    std::map<unsigned int, std::unique_ptr<GameRoom>> gameRooms;
+
     while (true)
     {
         Socket clientSocket(accept(listenSocket.AsHandle(), nullptr, nullptr));
