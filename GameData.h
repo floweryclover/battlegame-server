@@ -7,10 +7,12 @@
 
 #include <map>
 #include <string>
-#include <optional>
-#include <expected>
+#include "GameRoom.h"
+#include "Client.h"
 
 using ConnectionId = unsigned int;
+using GameRoomId = unsigned int;
+class CtsRpc;
 
 class GameData {
 public:
@@ -19,14 +21,21 @@ public:
     GameData& operator=(const GameData& rhs) = delete;
 
     static GameData& GetInstance();
-    void OnPlayerConnected(ConnectionId id);
+    void OnPlayerConnected(ConnectionId id, Client&& client);
     void OnPlayerDisconnected(ConnectionId id);
 
     bool SetPlayerNickname(ConnectionId id, const std::string& nickname);
     inline const std::string* GetPlayerNickname(ConnectionId id) { return mNicknames.contains(id) ? &mNicknames[id] : nullptr; }
+    inline bool IsClientExists(ConnectionId id) { return mClients.find(id) != mClients.end(); }
+    inline const Client* GetClient(ConnectionId id) { return mClients.contains(id) ? &mClients.at(id) : nullptr; }
+    bool JoinRandomGameRoom(ConnectionId id);
+
+    void AllClientReceive(CtsRpc& ctsRpc);
 private:
     GameData() = default;
+    std::map<unsigned int, Client> mClients;
     std::map<ConnectionId, std::string> mNicknames;
+    std::map<GameRoomId, GameRoom> mGameRooms;
 };
 
 

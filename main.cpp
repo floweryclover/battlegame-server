@@ -103,9 +103,8 @@ int main(int argc, char* argv[])
 
 
     int errorCode;
-    GameData gameData;
     std::queue<std::pair<unsigned int, Message>> sendQueue;
-    std::map<unsigned int, Client> clients;
+
     unsigned int clientNumber = 0;
     int currentSent = 0;
     StcRpc stcRpc(
@@ -115,18 +114,6 @@ int main(int argc, char* argv[])
             }
     );
     CtsRpc ctsRpc(&stcRpc);
-    std::map<unsigned int, std::unique_ptr<GameRoom>> gameRooms;
-    auto getFirstJoinableGameRoomId = [](const std::map<unsigned int, std::unique_ptr<GameRoom>>& rooms) -> std::optional<unsigned int>
-    {
-        for (const auto& roomPair : rooms)
-        {
-            if (!(roomPair.second->IsFull()))
-            {
-                return roomPair.first;
-            }
-        }
-        return std::nullopt;
-    };
 
     while (true)
     {
@@ -145,30 +132,26 @@ int main(int argc, char* argv[])
         {
             result = setNonblocking(clientSocket.AsHandle());
             assert(result != -1);
-
-            clients.emplace( clientNumber, Client(clientNumber, std::move(clientSocket)));
             std::cout << "[접속] 클라이언트 " << clientNumber << std::endl;
-
-            gameData.OnPlayerConnected(clientNumber);
-            stcRpc.RequestEnterNickname(clientNumber);
+            GameData::GetInstance().OnPlayerConnected(clientNumber, Client(clientNumber, std::move(clientSocket)));
             clientNumber++;
         }
 
         if (!sendQueue.empty())
         {
             auto& messagePair = sendQueue.front();
-            if (clients.find(messagePair.first) == clients.end())
+            if (!GameData::GetInstance().IsClientExists(messagePair.first))
             {
                 sendQueue.pop();
             }
             else
             {
-                const Client& targetClient = clients.at(messagePair.first);
+                const Client* targetClient = GameData::GetInstance().GetClient(messagePair.first);
                 const Message& message = messagePair.second;
 
                 const char* pSendBuffer = (currentSent < HEADER_SIZE ? reinterpret_cast<const char*>(&message) : message.mBodyBuffer) + currentSent;
                 int lengthToSend = (currentSent < HEADER_SIZE ? HEADER_SIZE : message.mHeaderBodySize) - currentSent;
-                result = send(targetClient.GetSocket().AsHandle(), pSendBuffer, lengthToSend, 0);
+                result = send(targetClient->GetSocket().AsHandle(), pSendBuffer, lengthToSend, 0);
                 switch (handleResult(result, errorCode))
                 {
                     case IoResult::IO_SUCCESSFUL:
@@ -181,44 +164,17 @@ int main(int argc, char* argv[])
                     case IoResult::IO_WOULD_BLOCK:
                         break;
                     case IoResult::IO_FATAL_ERROR:
-                        std::cerr << "[에러] 클라이언트 " << targetClient.GetConnectionId() << "에게 데이터를 전송하던 도중 에러가 발생하였습니다: 에러 코드" << errorCode << "." << std::endl;
+                        std::cerr << "[에러] 클라이언트 " << targetClient->GetConnectionId() << "에게 데이터를 전송하던 도중 에러가 발생하였습니다: 에러 코드" << errorCode << "." << std::endl;
                     case IoResult::IO_DISCONNECTED:
-                        std::cout << "[접속 해제] 클라이언트 " << targetClient.GetConnectionId() << std::endl;
-                        clients.erase(targetClient.GetConnectionId());
-                        gameData.OnPlayerDisconnected(targetClient.GetConnectionId());
+                        std::cout << "[접속 해제] 클라이언트 " << targetClient->GetConnectionId() << std::endl;
+                        GameData::GetInstance().OnPlayerDisconnected(targetClient->GetConnectionId());
                         currentSent = 0;
                         sendQueue.pop();
                         break;
                 }
             }
         }
-
-        for (auto iter = clients.begin(); iter != clients.end();)
-        {
-            Client& client = iter->second;
-
-            auto receiveResult = client.Receive();
-            if (receiveResult.has_value())
-            {
-                if (receiveResult.value().has_value())
-                {
-                    Context context(client.GetConnectionId());
-                    ctsRpc.HandleMessage(context, *receiveResult.value().value());
-                }
-            }
-            else
-            {
-                if (receiveResult.error().has_value())
-                {
-                    std::cerr << "[에러] 클라이언트 " << client.GetConnectionId() << " 에게서 데이터를 수신하던 도중 에러가 발생하였습니다: 에러 코드 " << receiveResult.error().value() << "." << std::endl;
-                }
-                std::cout << "[접속 해제] 클라이언트 " << client.GetConnectionId() << std::endl;
-                gameData.OnPlayerDisconnected(client.GetConnectionId());
-                clients.erase(iter++);
-                continue;
-            }
-            iter++;
-        }
+        GameData::GetInstance().AllClientReceive(ctsRpc);
     }
 
     return 0;
