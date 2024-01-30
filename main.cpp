@@ -109,7 +109,6 @@ int main(int argc, char* argv[])
     StcRpc stcRpc(
             [&sendQueue](int targetConnectionId, Message&& message)
             {
-                std::cout << "AA" << std::endl;
                 sendQueue.emplace(targetConnectionId, message);
             }
     );
@@ -152,16 +151,13 @@ int main(int argc, char* argv[])
 
         if (!sendQueue.empty())
         {
-            std::cout << "D" << std::endl;
             auto& messagePair = sendQueue.front();
             if (clients.find(messagePair.first) == clients.end())
             {
-                std::cout << "A" << std::endl;
                 sendQueue.pop();
             }
             else
             {
-                std::cout << "B" << std::endl;
                 const Client* const pTargetClient = clients[messagePair.first].get();
                 const Message& message = messagePair.second;
 
