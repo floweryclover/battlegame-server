@@ -10,7 +10,7 @@
 
 class StcRpc {
 public:
-    StcRpc(std::function<void(unsigned int, Message&&)> sendEnqueueFunction);
+    explicit StcRpc(std::function<void(unsigned int, Message&&)> sendEnqueueFunction);
     ~StcRpc() = default;
 
     static constexpr int STC_REQUEST_ENTER_NICKNAME = 1;
