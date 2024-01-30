@@ -8,12 +8,12 @@
 
 class Context {
 public:
-    Context(const int connectionId) : mConnectionId(connectionId) {};
+    explicit Context(const unsigned int connectionId) : mConnectionId(connectionId) {};
     ~Context() = default;
 
-    inline int GetConnectionId() const { return mConnectionId; }
+    inline unsigned int GetConnectionId() const { return mConnectionId; }
 private:
-    const int mConnectionId;
+    const unsigned int mConnectionId;
 };
 
 
