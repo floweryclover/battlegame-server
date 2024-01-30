@@ -14,7 +14,7 @@ class StcRpc;
 
 class CtsRpc {
 public:
-    CtsRpc(const StcRpc* const pStcRpc) : mpStcRpc(pStcRpc) {}
+    explicit CtsRpc(const StcRpc* const pStcRpc) : mpStcRpc(pStcRpc) {}
     ~CtsRpc() = default;
     void HandleMessage(const Context& context, const Message& message) const;
 
