@@ -14,14 +14,15 @@ class StcRpc;
 
 class CtsRpc {
 public:
-    explicit CtsRpc(const StcRpc* const pStcRpc) : mpStcRpc(pStcRpc) {}
+    explicit CtsRpc() = default;
     ~CtsRpc() = default;
     void HandleMessage(const Context& context, const Message& message) const;
 
     static constexpr int CTS_REQUEST_JOIN_GAME = 1;
+    static constexpr int CTS_ENTER_NICKNAME = 2;
 private:
-    void RequestJoinGame(Context context) const;
-    const StcRpc* const mpStcRpc;
+    void OnRequestJoinGame(const Context& context) const;
+    void OnEnterNickname(const Context& context, std::string&& nickname) const;
 };
 
 

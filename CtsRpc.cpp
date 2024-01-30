@@ -4,6 +4,7 @@
 
 #include "CtsRpc.h"
 #include "StcRpc.h"
+#include "GameData.h"
 #include <iostream>
 
 void CtsRpc::HandleMessage(const Context& context, const Message& message) const
@@ -11,13 +12,17 @@ void CtsRpc::HandleMessage(const Context& context, const Message& message) const
     switch (message.mHeaderMessageType)
     {
         case CtsRpc::CTS_REQUEST_JOIN_GAME:
-            RequestJoinGame(context);
+            OnRequestJoinGame(context);
             break;
     }
 }
 
-void CtsRpc::RequestJoinGame(Context context) const
+void CtsRpc::OnRequestJoinGame(const Context& context) const
 {
-    std::cout << "Hello!" << std::endl;
-    mpStcRpc->Test();
+
+}
+
+void CtsRpc::OnEnterNickname(const Context &context, std::string &&nickname) const
+{
+    GameData::GetInstance().SetPlayerNickname(context.GetConnectionId(), nickname);
 }

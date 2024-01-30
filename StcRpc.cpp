@@ -8,3 +8,4 @@ void StcRpc::RegisterSendEnqueueFunction(std::function<void(unsigned int, Messag
 {
     GetInstance().SendEnqueue = std::move(sendEnqueue);
 }
+

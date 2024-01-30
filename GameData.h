@@ -6,13 +6,12 @@
 #define BATTLEGAME_SERVER_GAMEDATA_H
 
 #include <map>
+#include <memory>
 #include <string>
-#include "GameRoom.h"
-#include "Client.h"
+#include "GameRoomManager.h"
+#include "ClientManager.h"
 
 using ConnectionId = unsigned int;
-using GameRoomId = unsigned int;
-class CtsRpc;
 
 class GameData {
 public:
@@ -20,22 +19,26 @@ public:
     GameData(const GameData& rhs) = delete;
     GameData& operator=(const GameData& rhs) = delete;
 
+    GameData(const char* listenAddress, unsigned short listenPort);
+
+    static void Initialize(const char* listenAddress, unsigned short listenPort);
     static GameData& GetInstance();
-    void OnPlayerConnected(ConnectionId id, Client&& client);
+    void OnPlayerConnected(ConnectionId id);
     void OnPlayerDisconnected(ConnectionId id);
 
     bool SetPlayerNickname(ConnectionId id, const std::string& nickname);
     inline const std::string* GetPlayerNickname(ConnectionId id) { return mNicknames.contains(id) ? &mNicknames[id] : nullptr; }
-    inline bool IsClientExists(ConnectionId id) { return mClients.find(id) != mClients.end(); }
-    inline const Client* GetClient(ConnectionId id) { return mClients.contains(id) ? &mClients.at(id) : nullptr; }
-    bool JoinRandomGameRoom(ConnectionId id);
 
-    void AllClientReceive(CtsRpc& ctsRpc);
+    inline GameRoomManager& GetGameRoomManager() { return mGameRoomManager; }
+    inline const GameRoomManager& GetGameRoomManager() const { return mGameRoomManager; }
+
+    inline ClientManager& GetClientManager() { return mClientManager; }
+    inline const ClientManager& GetClientManager() const { return mClientManager; }
 private:
-    GameData() = default;
-    std::map<unsigned int, Client> mClients;
+    static std::unique_ptr<GameData> spGameDataInstance;
     std::map<ConnectionId, std::string> mNicknames;
-    std::map<GameRoomId, GameRoom> mGameRooms;
+    GameRoomManager mGameRoomManager;
+    ClientManager mClientManager;
 };
 
 
