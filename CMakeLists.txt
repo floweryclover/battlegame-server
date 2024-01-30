@@ -22,4 +22,6 @@ add_executable(battlegame_server main.cpp
         Context.cpp
         IoResult.h
         GameRoom.h
-        GameRoom.cpp)
+        GameRoom.cpp
+        GameData.h
+        GameData.cpp)
