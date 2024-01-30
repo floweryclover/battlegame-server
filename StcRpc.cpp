@@ -4,10 +4,7 @@
 
 #include "StcRpc.h"
 
-StcRpc::StcRpc(std::function<void(unsigned int, Message&&)> sendEnqueueFunction) : SendEnqueue(std::move(sendEnqueueFunction)) {}
-
-void StcRpc::RequestEnterNickname(unsigned int connectionId) const
+void StcRpc::RegisterSendEnqueueFunction(std::function<void(unsigned int, Message &&)> sendEnqueue)
 {
-    Message message(0, STC_REQUEST_ENTER_NICKNAME, nullptr);
-    SendEnqueue(connectionId, std::move(message));
+    GetInstance().SendEnqueue = std::move(sendEnqueue);
 }

@@ -10,13 +10,16 @@
 
 class StcRpc {
 public:
-    explicit StcRpc(std::function<void(unsigned int, Message&&)> sendEnqueueFunction);
+    StcRpc(const StcRpc& rhs) = delete;
+    StcRpc(StcRpc&& rhs) = delete;
+    StcRpc& operator=(const StcRpc& rhs) = delete;
+
+    static void RegisterSendEnqueueFunction(std::function<void(unsigned int, Message&&)> sendEnqueue);
+    static inline StcRpc& GetInstance() { static StcRpc instance; return instance; }
     ~StcRpc() = default;
 
-    static constexpr int STC_REQUEST_ENTER_NICKNAME = 1;
-    void RequestEnterNickname(unsigned int connectionId) const;
-
 private:
+    explicit StcRpc() = default;
     std::function<void(unsigned int, Message&&)> SendEnqueue;
 };
 
