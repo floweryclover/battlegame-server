@@ -24,4 +24,6 @@ add_executable(battlegame_server main.cpp
         GameRoom.h
         GameRoom.cpp
         GameData.h
-        GameData.cpp)
+        GameData.cpp
+        GameRoomManager.cpp
+        GameRoomManager.h)

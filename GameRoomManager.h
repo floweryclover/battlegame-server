@@ -1,0 +1,14 @@
+//
+// Created by floweryclover on 2024-01-30.
+//
+
+#ifndef BATTLEGAME_SERVER_GAMEROOMMANAGER_H
+#define BATTLEGAME_SERVER_GAMEROOMMANAGER_H
+
+
+class GameRoomManager {
+
+};
+
+
+#endif //BATTLEGAME_SERVER_GAMEROOMMANAGER_H
