@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
 
 
     int errorCode;
-    std::queue<std::pair<int, Message>> sendQueue;
+    std::queue<std::pair<unsigned int, Message>> sendQueue;
     std::map<unsigned int, std::unique_ptr<Client>> clients;
     unsigned int clientNumber = 0;
     int currentSent = 0;

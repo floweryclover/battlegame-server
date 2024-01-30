@@ -20,11 +20,11 @@ class Client {
 public:
     Client(const Client& rhs) = delete;
     Client& operator=(const Client& rhs) = delete;
-    explicit Client(int connectionId, Socket&& socket) noexcept;
+    explicit Client(unsigned int connectionId, Socket&& socket) noexcept;
     Client(Client&& rhs) noexcept;
     ~Client() = default;
 
-    inline int GetConnectionId() const { return this->mConnectionId; }
+    inline unsigned int GetConnectionId() const { return this->mConnectionId; }
     inline const Socket& GetSocket() const { return this->mSocket; }
 
     /***
@@ -35,7 +35,7 @@ public:
      */
     std::expected<std::optional<std::unique_ptr<class Message>>, std::optional<ErrorCode>> Receive();
 private:
-    const int mConnectionId;
+    const unsigned int mConnectionId;
     const Socket mSocket;
     int mCurrentReceived;
     int mTotalSizeToReceive;

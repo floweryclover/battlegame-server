@@ -4,10 +4,10 @@
 
 #include "StcRpc.h"
 
-StcRpc::StcRpc(std::function<void(int, Message&&)> sendEnqueueFunction) : SendEnqueue(std::move(sendEnqueueFunction)) {}
+StcRpc::StcRpc(std::function<void(unsigned int, Message&&)> sendEnqueueFunction) : SendEnqueue(std::move(sendEnqueueFunction)) {}
 
-void StcRpc::Test() const
+void StcRpc::RequestEnterNickname(unsigned int connectionId) const
 {
-    Message message(0, STC_TEST, nullptr);
-    SendEnqueue(0, std::move(message));
+    Message message(0, STC_REQUEST_ENTER_NICKNAME, nullptr);
+    SendEnqueue(connectionId, std::move(message));
 }
