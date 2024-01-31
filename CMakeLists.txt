@@ -28,4 +28,6 @@ add_executable(battlegame_server main.cpp
         GameRoomManager.cpp
         GameRoomManager.h
         ClientManager.cpp
-        ClientManager.h)
+        ClientManager.h
+        BattleGameServer.cpp
+        BattleGameServer.h)

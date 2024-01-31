@@ -1,0 +1,14 @@
+//
+// Created by floweryclover on 2024-01-31.
+//
+
+#ifndef BATTLEGAME_SERVER_BATTLEGAMESERVER_H
+#define BATTLEGAME_SERVER_BATTLEGAMESERVER_H
+
+
+class BattleGameServer {
+
+};
+
+
+#endif //BATTLEGAME_SERVER_BATTLEGAMESERVER_H
