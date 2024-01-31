@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cassert>
 #include "ClientManager.h"
+#include "BattleGameServer.h"
 #include "GameData.h"
 #include "StcRpc.h"
 #include "Constants.h"
@@ -80,7 +81,7 @@ void ClientManager::ProcessNetworkIoOnce()
 #endif
         assert(result != -1);
         std::cout << "[접속] 클라이언트 " << mNewClientNumber << std::endl;
-        GameData::GetInstance().OnPlayerConnected(mNewClientNumber);
+        BattleGameServer::GetInstance().GetGameData().OnPlayerConnected(mNewClientNumber);
         mClients.emplace(mNewClientNumber, Client(mNewClientNumber, std::move(clientSocket)));
         mNewClientNumber++;
     }
@@ -116,7 +117,7 @@ void ClientManager::ProcessNetworkIoOnce()
             else if (result == 0)
             {
                 std::cout << "[접속 해제] 클라이언트 " << targetClient.GetConnectionId() << std::endl;
-                GameData::GetInstance().OnPlayerDisconnected(targetClient.GetConnectionId());
+                BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(targetClient.GetConnectionId());
                 mCurrentSent = 0;
                 mClients.erase(targetClient.GetConnectionId());
                 mSendQueue.pop();
@@ -153,7 +154,7 @@ void ClientManager::ProcessNetworkIoOnce()
                 std::cerr << "[에러] 클라이언트 " << client.GetConnectionId() << " 에게서 데이터를 수신하던 도중 에러가 발생하였습니다: 에러 코드 " << receiveResult.error().value() << "." << std::endl;
             }
             std::cout << "[접속 해제] 클라이언트 " << client.GetConnectionId() << std::endl;
-            GameData::GetInstance().OnPlayerDisconnected(client.GetConnectionId());
+            BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(client.GetConnectionId());
             mClients.erase(iter++);
             continue;
         }

@@ -8,10 +8,10 @@
 #include <map>
 #include <memory>
 #include <string>
-#include "GameRoomManager.h"
-#include "ClientManager.h"
 
 using ConnectionId = unsigned int;
+
+class GameRoomManager;
 
 class GameData {
 public:
@@ -19,26 +19,21 @@ public:
     GameData(const GameData& rhs) = delete;
     GameData& operator=(const GameData& rhs) = delete;
 
-    GameData(const char* listenAddress, unsigned short listenPort);
+    explicit GameData() noexcept;
+    ~GameData() = default;
 
-    static void Initialize(const char* listenAddress, unsigned short listenPort);
-    static GameData& GetInstance();
     void OnPlayerConnected(ConnectionId id);
     void OnPlayerDisconnected(ConnectionId id);
 
     bool SetPlayerNickname(ConnectionId id, const std::string& nickname);
     inline const std::string* GetPlayerNickname(ConnectionId id) { return mNicknames.contains(id) ? &mNicknames[id] : nullptr; }
 
-    inline GameRoomManager& GetGameRoomManager() { return mGameRoomManager; }
-    inline const GameRoomManager& GetGameRoomManager() const { return mGameRoomManager; }
+    inline GameRoomManager& GetGameRoomManager() { return const_cast<GameRoomManager&>(GetConstGameRoomManager()); }
+    inline const GameRoomManager& GetConstGameRoomManager() const { return *mpGameRoomManager; }
 
-    inline ClientManager& GetClientManager() { return mClientManager; }
-    inline const ClientManager& GetClientManager() const { return mClientManager; }
 private:
-    static std::unique_ptr<GameData> spGameDataInstance;
     std::map<ConnectionId, std::string> mNicknames;
-    GameRoomManager mGameRoomManager;
-    ClientManager mClientManager;
+    std::unique_ptr<GameRoomManager> mpGameRoomManager;
 };
 
 

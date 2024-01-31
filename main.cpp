@@ -1,5 +1,6 @@
 #include <iostream>
-#include "GameData.h"
+#include "BattleGameServer.h"
+#include "ClientManager.h"
 
 int main(int argc, char* argv[])
 {
@@ -12,10 +13,10 @@ int main(int argc, char* argv[])
         std::cerr << "Usage: " << argv[0] << " <listen-address> <listen-port>" << std::endl;
         return 1;
     }
-    GameData::Initialize(argv[1], atoi(argv[2]));
+    BattleGameServer::Initialize(argv[1], atoi(argv[2]));
     while (true)
     {
-        GameData::GetInstance().GetClientManager().ProcessNetworkIoOnce();
+        BattleGameServer::GetInstance().GetClientManager().ProcessNetworkIoOnce();
     }
 
     return 0;

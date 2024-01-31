@@ -3,30 +3,10 @@
 //
 
 #include "GameData.h"
-#include "Message.h"
-#include "Context.h"
+#include "GameRoomManager.h"
 #include "CtsRpc.h"
-#include <iostream>
-#include <cassert>
 
-std::unique_ptr<GameData> GameData::spGameDataInstance = nullptr;
-
-void GameData::Initialize(const char *listenAddress, unsigned short listenPort)
-{
-    assert(spGameDataInstance == nullptr);
-    spGameDataInstance = std::make_unique<GameData>(listenAddress, listenPort);
-}
-
-GameData::GameData(const char* listenAddress, unsigned short listenPort) : mClientManager(listenAddress, listenPort)
-{
-
-}
-
-GameData& GameData::GetInstance()
-{
-    assert(spGameDataInstance != nullptr);
-    return *spGameDataInstance;
-}
+GameData::GameData() noexcept : mpGameRoomManager(std::make_unique<GameRoomManager>()) {}
 
 void GameData::OnPlayerDisconnected(ConnectionId id)
 {

@@ -5,6 +5,7 @@
 #include "CtsRpc.h"
 #include "StcRpc.h"
 #include "GameData.h"
+#include "BattleGameServer.h"
 #include <iostream>
 
 void CtsRpc::HandleMessage(const Context& context, const Message& message) const
@@ -24,5 +25,5 @@ void CtsRpc::OnRequestJoinGame(const Context& context) const
 
 void CtsRpc::OnEnterNickname(const Context &context, std::string &&nickname) const
 {
-    GameData::GetInstance().SetPlayerNickname(context.GetConnectionId(), nickname);
+    BattleGameServer::GetInstance().GetGameData().SetPlayerNickname(context.GetConnectionId(), nickname);
 }
