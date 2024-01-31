@@ -17,17 +17,18 @@ public:
     GameRoom(GameRoom&& rhs) noexcept;
     ~GameRoom() = default;
 
-    inline bool IsEmpty() const { return mCurrentPlayerCount == 0; }
-    inline bool IsFull() const { return mMaxPlayerCount == mCurrentPlayerCount; }
-    inline unsigned short GetFreePlayerSlotCount() const { return mMaxPlayerCount - mCurrentPlayerCount; }
+    inline bool IsEmpty() const { return mJoinedPlayers.size() == 0; }
+    inline bool IsFull() const { return mJoinedPlayers.size() == mMaxPlayerCount; }
     inline bool IsPlayerJoined(ConnectionId id) const { return mJoinedPlayers.find(id) != mJoinedPlayers.end(); }
+    inline unsigned short GetMaxPlayerCount() const { return mMaxPlayerCount; }
+    inline unsigned short GetCurrentPlayerCount() const { return mJoinedPlayers.size(); }
 
-    bool PlayerJoin(ConnectionId id);
+    void OnPlayerJoined(ConnectionId id) noexcept;
+    void OnPlayerLeft(ConnectionId id) noexcept;
 
 private:
     unsigned const int mRoomId;
     unsigned short mMaxPlayerCount;
-    unsigned short mCurrentPlayerCount;
     std::set<ConnectionId> mJoinedPlayers;
 };
 

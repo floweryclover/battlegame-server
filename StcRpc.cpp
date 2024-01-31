@@ -4,8 +4,7 @@
 
 #include "StcRpc.h"
 
-void StcRpc::RegisterSendEnqueueFunction(std::function<void(unsigned int, Message &&)> sendEnqueue)
+StcRpc::StcRpc(std::function<void(unsigned int, Message&&)> sendEnqueue) noexcept : mSendEnqueue(std::move(sendEnqueue))
 {
-    GetInstance().SendEnqueue = std::move(sendEnqueue);
-}
 
+}

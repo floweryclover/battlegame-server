@@ -15,7 +15,12 @@ GameRoom::GameRoom(GameRoom &&rhs) noexcept : GameRoom(rhs.mRoomId)
 
 }
 
-bool GameRoom::PlayerJoin(ConnectionId id)
+void GameRoom::OnPlayerJoined(ConnectionId id) noexcept
 {
-    return true;
+    mJoinedPlayers.insert(id);
+}
+
+void GameRoom::OnPlayerLeft(ConnectionId id) noexcept
+{
+    mJoinedPlayers.erase(id);
 }

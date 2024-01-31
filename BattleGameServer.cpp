@@ -6,6 +6,7 @@
 #include "GameData.h"
 #include "ClientManager.h"
 #include "GameRoomManager.h"
+#include "StcRpc.h"
 #include <cassert>
 
 std::unique_ptr<BattleGameServer> BattleGameServer::spSingleton = nullptr;
@@ -17,6 +18,12 @@ void BattleGameServer::Initialize(const char* listenAddress, unsigned short list
 
     spSingleton->mpClientManager = std::make_unique<ClientManager>(listenAddress, listenPort);
     spSingleton->mpGameData = std::make_unique<GameData>();
+    spSingleton->mpStcRpc = std::make_unique<StcRpc>(
+            [](unsigned int clientId, Message&& message)
+            {
+                BattleGameServer::GetInstance().GetClientManager().GetSendQueue().emplace(clientId, std::move(message));
+            }
+            );
 }
 
 void BattleGameServer::Tick()

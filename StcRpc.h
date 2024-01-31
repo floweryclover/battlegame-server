@@ -6,7 +6,8 @@
 #define BATTLEGAME_SERVER_STCRPC_H
 
 #include <functional>
-#include "Message.h"
+
+class Message;
 
 class StcRpc {
 public:
@@ -14,13 +15,11 @@ public:
     StcRpc(StcRpc&& rhs) = delete;
     StcRpc& operator=(const StcRpc& rhs) = delete;
 
-    static void RegisterSendEnqueueFunction(std::function<void(unsigned int, Message&&)> sendEnqueue);
-    static inline StcRpc& GetInstance() { static StcRpc instance; return instance; }
+    explicit StcRpc(std::function<void(unsigned int, Message&&)> sendEnqueue) noexcept;
     ~StcRpc() = default;
 
 private:
-    explicit StcRpc() = default;
-    std::function<void(unsigned int, Message&&)> SendEnqueue;
+    std::function<void(unsigned int, Message&&)> mSendEnqueue;
 };
 
 

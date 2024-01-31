@@ -24,12 +24,6 @@
 
 ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenPort) : mCurrentSent(0), mNewClientNumber(0)
 {
-    StcRpc::RegisterSendEnqueueFunction(
-            [this](ConnectionId id, Message&& message)
-            {
-                mSendQueue.emplace(id, std::move(message));
-            }
-            );
     mpListenSocket = std::make_unique<Socket>(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
     int option = 1;
     int result = setsockopt(mpListenSocket->AsHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));

@@ -9,6 +9,7 @@
 
 class ClientManager;
 class GameData;
+class StcRpc;
 
 class BattleGameServer {
 public:
@@ -34,6 +35,7 @@ private:
     static std::unique_ptr<BattleGameServer> spSingleton;
     std::unique_ptr<ClientManager> mpClientManager;
     std::unique_ptr<GameData> mpGameData;
+    std::unique_ptr<StcRpc> mpStcRpc;
 };
 
 

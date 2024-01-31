@@ -26,6 +26,8 @@ public:
     inline ConnectionId IsClientExists(ConnectionId id) const { return mClients.find(id) != mClients.end(); }
 
     void ProcessNetworkIoOnce();
+
+    inline std::queue<std::pair<ConnectionId, Message>>& GetSendQueue() { return mSendQueue; }
 private:
     CtsRpc mCtsRpc;
     std::unique_ptr<Socket> mpListenSocket;
