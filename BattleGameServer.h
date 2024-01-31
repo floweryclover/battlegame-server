@@ -27,6 +27,8 @@ public:
 
     inline GameData& GetGameData() noexcept { return const_cast<GameData&>(GetConstGameData()); }
     inline const GameData& GetConstGameData() const noexcept { return *this->mpGameData; }
+
+    void Tick();
 private:
     BattleGameServer() = default;
     static std::unique_ptr<BattleGameServer> spSingleton;

@@ -1,6 +1,5 @@
 #include <iostream>
 #include "BattleGameServer.h"
-#include "ClientManager.h"
 
 int main(int argc, char* argv[])
 {
@@ -16,7 +15,7 @@ int main(int argc, char* argv[])
     BattleGameServer::Initialize(argv[1], atoi(argv[2]));
     while (true)
     {
-        BattleGameServer::GetInstance().GetClientManager().ProcessNetworkIoOnce();
+        BattleGameServer::GetInstance().Tick();
     }
 
     return 0;

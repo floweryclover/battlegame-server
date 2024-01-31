@@ -30,4 +30,5 @@ add_executable(battlegame_server main.cpp
         ClientManager.cpp
         ClientManager.h
         BattleGameServer.cpp
-        BattleGameServer.h)
+        BattleGameServer.h
+)
