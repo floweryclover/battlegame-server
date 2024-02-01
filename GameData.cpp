@@ -8,14 +8,16 @@
 
 GameData::GameData() noexcept : mpGameRoomManager(std::make_unique<GameRoomManager>()) {}
 
-void GameData::OnPlayerDisconnected(ConnectionId id)
-{
-    mNicknames.erase(id);
-}
-
 void GameData::OnPlayerConnected(ConnectionId id)
 {
     mNicknames.emplace(id, std::string("플레이어"));
+    mpGameRoomManager->OnPlayerConnected(id);
+}
+
+void GameData::OnPlayerDisconnected(ConnectionId id)
+{
+    mNicknames.erase(id);
+    mpGameRoomManager->OnPlayerDisconnected(id);
 }
 
 bool GameData::SetPlayerNickname(ConnectionId id, const std::string& nickname)

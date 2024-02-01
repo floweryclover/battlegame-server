@@ -18,6 +18,10 @@ public:
     static constexpr GameRoomId ROOM_MAINMENU = 0;
     static constexpr GameRoomId ROOM_MATCHMAKING = 1;
     bool JoinPlayer(ConnectionId playerId, GameRoomId roomId);
+
+    void OnPlayerConnected(ConnectionId id);
+    void OnPlayerDisconnected(ConnectionId id);
+
 private:
     GameRoomId mNewRoomId;
     std::map<ConnectionId, GameRoomId> mRoomOfPlayers;

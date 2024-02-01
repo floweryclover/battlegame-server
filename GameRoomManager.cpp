@@ -28,3 +28,13 @@ bool GameRoomManager::JoinPlayer(ConnectionId playerId, GameRoomId roomId)
     mRoomOfPlayers.emplace(playerId, roomId);
     return true;
 }
+
+void GameRoomManager::OnPlayerConnected(ConnectionId id)
+{
+    mRoomOfPlayers.emplace(id, ROOM_MAINMENU);
+}
+
+void GameRoomManager::OnPlayerDisconnected(ConnectionId id)
+{
+    mRoomOfPlayers.erase(id);
+}
