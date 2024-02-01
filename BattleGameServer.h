@@ -29,6 +29,9 @@ public:
     inline GameData& GetGameData() noexcept { return const_cast<GameData&>(GetConstGameData()); }
     inline const GameData& GetConstGameData() const noexcept { return *this->mpGameData; }
 
+    inline StcRpc& GetStcRpc() noexcept { return const_cast<StcRpc&>(GetConstStcRpc()); }
+    inline const StcRpc& GetConstStcRpc() const noexcept { return *this->mpStcRpc; }
+
     void Tick();
 private:
     BattleGameServer() = default;

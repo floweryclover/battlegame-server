@@ -7,9 +7,50 @@
 #include "BattleGameServer.h"
 #include "ClientManager.h"
 
-GameRoomManager::GameRoomManager() noexcept : mNewRoomId(ROOM_MATCHMAKING+1) {}
+GameRoomManager::GameRoomManager() noexcept : mNewRoomId(GameRoom::ROOM_MATCHMAKING+1)
+{
+    mGameRooms.emplace(GameRoom::ROOM_MAINMENU, GameRoom(GameRoom::ROOM_MAINMENU));
+    mGameRooms.emplace(GameRoom::ROOM_MATCHMAKING, GameRoom(GameRoom::ROOM_MATCHMAKING));
+}
 
-bool GameRoomManager::CheckIfPlayerNotValid(ConnectionId id) const
+void GameRoomManager::Tick()
+{
+    auto matchMakePlayer = [this](ConnectionId playerId)
+    {
+        if (CheckIfPlayerNotValid(playerId)
+            || mRoomOfPlayers[playerId] != GameRoom::ROOM_MATCHMAKING)
+        {
+            return;
+        }
+
+        for (auto& roomPair : mGameRooms)
+        {
+            if (roomPair.first == GameRoom::ROOM_MATCHMAKING || roomPair.first == GameRoom::ROOM_MAINMENU)
+            {
+                continue;
+            }
+
+            if (!roomPair.second.IsFull())
+            {
+                JoinPlayer(playerId, roomPair.first);
+                return;
+            }
+        }
+
+        mGameRooms.emplace(mNewRoomId, GameRoom(mNewRoomId));
+        JoinPlayer(playerId, mNewRoomId);
+        mNewRoomId++;
+    };
+
+    if (!mMatchMakingPlayers.empty())
+    {
+        auto top = mMatchMakingPlayers.front();
+        mMatchMakingPlayers.pop();
+        matchMakePlayer(top);
+    }
+}
+
+bool GameRoomManager::CheckIfPlayerNotValid(ConnectionId id)
 {
     return !BattleGameServer::GetConstInstance().GetConstClientManager().IsClientExists(id);
 }
@@ -22,46 +63,43 @@ bool GameRoomManager::JoinPlayer(ConnectionId playerId, GameRoomId roomId)
         return false;
     }
 
-    // 만약 다른 방에 속해있으면 퇴장 처리
-    if (mRoomOfPlayers.find(playerId) != mRoomOfPlayers.end())
-    {
-        // 퇴장 처리 로직
-        mRoomOfPlayers.erase(playerId);
-    }
-
-    // 입장 처리 로직
-    mRoomOfPlayers.emplace(playerId, roomId);
+    mGameRooms.at(mRoomOfPlayers[playerId]).OnPlayerLeft(playerId);
+    mGameRooms.at(roomId).OnPlayerJoined(playerId);
+    mRoomOfPlayers[playerId] = roomId;
     return true;
 }
 
 bool GameRoomManager::StartMatchMaking(ConnectionId playerId)
 {
     if (CheckIfPlayerNotValid(playerId)
-    || mRoomOfPlayers[playerId] != ROOM_MAINMENU)
+    || mRoomOfPlayers[playerId] != GameRoom::ROOM_MAINMENU)
     {
         return false;
     }
 
-    mRoomOfPlayers[playerId] = ROOM_MATCHMAKING;
+    JoinPlayer(playerId, GameRoom::ROOM_MATCHMAKING);
+    mMatchMakingPlayers.emplace(playerId);
+    return true;
 }
 
 void GameRoomManager::StopMatchMaking(ConnectionId playerId)
 {
     if (CheckIfPlayerNotValid(playerId)
-    || mRoomOfPlayers[playerId] != ROOM_MATCHMAKING)
+    || mRoomOfPlayers[playerId] != GameRoom::ROOM_MATCHMAKING)
     {
         return;
     }
 
-    mRoomOfPlayers[playerId] = ROOM_MAINMENU;
+    JoinPlayer(playerId, GameRoom::ROOM_MAINMENU);
 }
 
 void GameRoomManager::OnPlayerConnected(ConnectionId id)
 {
-    mRoomOfPlayers.emplace(id, ROOM_MAINMENU);
+    mRoomOfPlayers.emplace(id, GameRoom::ROOM_MAINMENU);
 }
 
 void GameRoomManager::OnPlayerDisconnected(ConnectionId id)
 {
+    mGameRooms.at(mRoomOfPlayers[id]).OnPlayerLeft(id);
     mRoomOfPlayers.erase(id);
 }

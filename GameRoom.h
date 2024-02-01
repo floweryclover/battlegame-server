@@ -8,9 +8,13 @@
 #include <set>
 
 using ConnectionId = unsigned int;
+using GameRoomId = unsigned int;
 
 class GameRoom {
 public:
+    static constexpr GameRoomId ROOM_MAINMENU = 0;
+    static constexpr GameRoomId ROOM_MATCHMAKING = 1;
+
     GameRoom(const GameRoom& rhs) = delete;
     GameRoom& operator=(const GameRoom& rhs) = delete;
     explicit GameRoom(unsigned int roomId) noexcept;

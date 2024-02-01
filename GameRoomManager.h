@@ -6,6 +6,7 @@
 #define BATTLEGAME_SERVER_GAMEROOMMANAGER_H
 
 #include <map>
+#include <queue>
 #include "GameRoom.h"
 
 using ConnectionId = unsigned int;
@@ -15,8 +16,7 @@ class GameRoomManager {
 public:
     explicit GameRoomManager() noexcept;
     ~GameRoomManager() = default;
-    static constexpr GameRoomId ROOM_MAINMENU = 0;
-    static constexpr GameRoomId ROOM_MATCHMAKING = 1;
+
     bool JoinPlayer(ConnectionId playerId, GameRoomId roomId);
     bool StartMatchMaking(ConnectionId playerId);
     void StopMatchMaking(ConnectionId playerId);
@@ -24,12 +24,15 @@ public:
     void OnPlayerConnected(ConnectionId id);
     void OnPlayerDisconnected(ConnectionId id);
 
+    void Tick();
+
 private:
     GameRoomId mNewRoomId;
     std::map<ConnectionId, GameRoomId> mRoomOfPlayers;
-    std::map<ConnectionId, GameRoom> mGameRooms;
+    std::map<GameRoomId, GameRoom> mGameRooms;
+    std::queue<ConnectionId> mMatchMakingPlayers;
 
-    bool CheckIfPlayerNotValid(ConnectionId id) const;
+    static bool CheckIfPlayerNotValid(ConnectionId id);
 };
 
 

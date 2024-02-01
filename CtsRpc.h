@@ -18,10 +18,10 @@ public:
     ~CtsRpc() = default;
     void HandleMessage(const Context& context, const Message& message) const;
 
-    static constexpr int CTS_REQUEST_JOIN_GAME = 1;
+    static constexpr int CTS_REQUEST_MATCHMAKING = 1;
     static constexpr int CTS_ENTER_NICKNAME = 2;
 private:
-    void OnRequestJoinGame(const Context& context) const;
+    void OnRequestMatchMaking(const Context& context) const;
     void OnEnterNickname(const Context& context, std::string&& nickname) const;
 };
 

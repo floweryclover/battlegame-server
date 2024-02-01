@@ -6,21 +6,25 @@
 #include "StcRpc.h"
 #include "GameData.h"
 #include "BattleGameServer.h"
+#include "GameRoomManager.h"
 #include <iostream>
 
 void CtsRpc::HandleMessage(const Context& context, const Message& message) const
 {
     switch (message.mHeaderMessageType)
     {
-        case CtsRpc::CTS_REQUEST_JOIN_GAME:
-            OnRequestJoinGame(context);
+        case CtsRpc::CTS_REQUEST_MATCHMAKING:
+            OnRequestMatchMaking(context);
             break;
     }
 }
 
-void CtsRpc::OnRequestJoinGame(const Context& context) const
+void CtsRpc::OnRequestMatchMaking(const Context& context) const
 {
-
+    BattleGameServer::GetInstance()
+    .GetGameData()
+    .GetGameRoomManager()
+    .StartMatchMaking(context.GetConnectionId());
 }
 
 void CtsRpc::OnEnterNickname(const Context &context, std::string &&nickname) const

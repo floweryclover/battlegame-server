@@ -28,5 +28,6 @@ void BattleGameServer::Initialize(const char* listenAddress, unsigned short list
 
 void BattleGameServer::Tick()
 {
+    mpGameData->GetGameRoomManager().Tick();
     mpClientManager->ProcessNetworkIoOnce();
 }
