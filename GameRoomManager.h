@@ -13,8 +13,13 @@ using GameRoomId = unsigned int;
 
 class GameRoomManager {
 public:
+    explicit GameRoomManager() noexcept;
+    ~GameRoomManager() = default;
+    static constexpr GameRoomId ROOM_MAINMENU = 0;
+    static constexpr GameRoomId ROOM_MATCHMAKING = 1;
     bool JoinPlayer(ConnectionId playerId, GameRoomId roomId);
 private:
+    GameRoomId mNewRoomId;
     std::map<ConnectionId, GameRoomId> mRoomOfPlayers;
     std::map<ConnectionId, GameRoom> mGameRooms;
 };

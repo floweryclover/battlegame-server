@@ -7,6 +7,8 @@
 #include "BattleGameServer.h"
 #include "ClientManager.h"
 
+GameRoomManager::GameRoomManager() noexcept : mNewRoomId(ROOM_MATCHMAKING+1) {}
+
 bool GameRoomManager::JoinPlayer(ConnectionId playerId, GameRoomId roomId)
 {
     if (!BattleGameServer::GetConstInstance().GetConstClientManager().IsClientExists(playerId) // 해당 클라이언트가 지금 접속해 있는지
