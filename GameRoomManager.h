@@ -18,6 +18,8 @@ public:
     static constexpr GameRoomId ROOM_MAINMENU = 0;
     static constexpr GameRoomId ROOM_MATCHMAKING = 1;
     bool JoinPlayer(ConnectionId playerId, GameRoomId roomId);
+    bool StartMatchMaking(ConnectionId playerId);
+    void StopMatchMaking(ConnectionId playerId);
 
     void OnPlayerConnected(ConnectionId id);
     void OnPlayerDisconnected(ConnectionId id);
@@ -26,6 +28,8 @@ private:
     GameRoomId mNewRoomId;
     std::map<ConnectionId, GameRoomId> mRoomOfPlayers;
     std::map<ConnectionId, GameRoom> mGameRooms;
+
+    bool CheckIfPlayerNotValid(ConnectionId id) const;
 };
 
 
