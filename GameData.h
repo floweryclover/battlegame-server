@@ -9,7 +9,8 @@
 #include <memory>
 #include <string>
 
-using ConnectionId = unsigned int;
+using SerializedEndpoint = unsigned long long;
+using ClientId = SerializedEndpoint;
 
 class GameRoomManager;
 
@@ -22,17 +23,17 @@ public:
     explicit GameData() noexcept;
     ~GameData() = default;
 
-    void OnPlayerConnected(ConnectionId id);
-    void OnPlayerDisconnected(ConnectionId id);
+    void OnPlayerConnected(ClientId clientId);
+    void OnPlayerDisconnected(ClientId clientId);
 
-    bool SetPlayerNickname(ConnectionId id, const std::string& nickname);
-    inline const std::string* GetPlayerNickname(ConnectionId id) { return mNicknames.contains(id) ? &mNicknames[id] : nullptr; }
+    bool SetPlayerNickname(ClientId clientId, const std::string& nickname);
+    inline const std::string* GetPlayerNickname(ClientId clientId) { return mNicknames.contains(clientId) ? &mNicknames[clientId] : nullptr; }
 
     inline GameRoomManager& GetGameRoomManager() { return const_cast<GameRoomManager&>(GetConstGameRoomManager()); }
     inline const GameRoomManager& GetConstGameRoomManager() const { return *mpGameRoomManager; }
 
 private:
-    std::map<ConnectionId, std::string> mNicknames;
+    std::map<ClientId ,std::string> mNicknames;
     std::unique_ptr<GameRoomManager> mpGameRoomManager;
 };
 

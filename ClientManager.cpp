@@ -22,7 +22,7 @@
 #include <cerrno>
 #endif
 
-ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenPort) : mCurrentSent(0), mNewClientNumber(0)
+ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenPort) : mCurrentSent(0)
 {
     mpListenSocket = std::make_unique<Socket>(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
     int option = 1;
@@ -53,7 +53,9 @@ ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenP
 
 void ClientManager::ProcessNetworkIoOnce()
 {
-    Socket clientSocket(accept(mpListenSocket->AsHandle(), nullptr, nullptr));
+    struct sockaddr_in clientAddr {};
+    int clientAddrLen = sizeof(clientAddr);
+    Socket clientSocket(accept(mpListenSocket->AsHandle(), reinterpret_cast<struct sockaddr*>(&clientAddr), reinterpret_cast<socklen_t*>(&clientAddrLen)));
     if (clientSocket.AsHandle() == INVALID_SOCKET)
     {
 #ifdef _WIN32
@@ -74,10 +76,10 @@ void ClientManager::ProcessNetworkIoOnce()
         int result = ioctl(clientSocket.AsHandle(), FIONBIO, &nonblockingFlag);
 #endif
         assert(result != -1);
-        std::cout << "[접속] 클라이언트 " << mNewClientNumber << std::endl;
-        BattleGameServer::GetInstance().GetGameData().OnPlayerConnected(mNewClientNumber);
-        mClients.emplace(mNewClientNumber, Client(mNewClientNumber, std::move(clientSocket)));
-        mNewClientNumber++;
+        ClientId serialized = (ntohl(clientAddr.sin_addr.s_addr) << 16) + (ntohs(clientAddr.sin_port));
+        std::cout << "[접속] 클라이언트 " << serialized << std::endl;
+        BattleGameServer::GetInstance().GetGameData().OnPlayerConnected(serialized);
+        mClients.emplace(serialized, Client(serialized, std::move(clientSocket)));
     }
 
     if (!mSendQueue.empty())
@@ -105,15 +107,15 @@ void ClientManager::ProcessNetworkIoOnce()
                 if (errorCode != EWOULDBLOCK)
 #endif
                 {
-                    std::cerr << "[에러] 클라이언트 " << targetClient.GetConnectionId() << "에게 데이터를 전송하던 도중 에러가 발생하였습니다: 에러 코드" << errorCode << "." << std::endl;
+                    std::cerr << "[에러] 클라이언트 " << targetClient.GetClientId() << "에게 데이터를 전송하던 도중 에러가 발생하였습니다: 에러 코드" << errorCode << "." << std::endl;
                 }
             }
             else if (result == 0)
             {
-                std::cout << "[접속 해제] 클라이언트 " << targetClient.GetConnectionId() << std::endl;
-                BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(targetClient.GetConnectionId());
+                std::cout << "[접속 해제] 클라이언트 " << targetClient.GetClientId() << std::endl;
+                BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(targetClient.GetClientId());
                 mCurrentSent = 0;
-                mClients.erase(targetClient.GetConnectionId());
+                mClients.erase(targetClient.GetClientId());
                 mSendQueue.pop();
             }
             else
@@ -137,7 +139,7 @@ void ClientManager::ProcessNetworkIoOnce()
         {
             if (receiveResult.value().has_value())
             {
-                Context context(client.GetConnectionId());
+                Context context(client.GetClientId());
                 mCtsRpc.HandleMessage(context, *receiveResult.value().value());
             }
         }
@@ -145,10 +147,10 @@ void ClientManager::ProcessNetworkIoOnce()
         {
             if (receiveResult.error().has_value())
             {
-                std::cerr << "[에러] 클라이언트 " << client.GetConnectionId() << " 에게서 데이터를 수신하던 도중 에러가 발생하였습니다: 에러 코드 " << receiveResult.error().value() << "." << std::endl;
+                std::cerr << "[에러] 클라이언트 " << client.GetClientId() << " 에게서 데이터를 수신하던 도중 에러가 발생하였습니다: 에러 코드 " << receiveResult.error().value() << "." << std::endl;
             }
-            std::cout << "[접속 해제] 클라이언트 " << client.GetConnectionId() << std::endl;
-            BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(client.GetConnectionId());
+            std::cout << "[접속 해제] 클라이언트 " << client.GetClientId() << std::endl;
+            BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(client.GetClientId());
             mClients.erase(iter++);
             continue;
         }

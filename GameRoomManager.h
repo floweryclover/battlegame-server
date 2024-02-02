@@ -9,7 +9,8 @@
 #include <queue>
 #include "GameRoom.h"
 
-using ConnectionId = unsigned int;
+using SerializedEndpoint = unsigned long long;
+using ClientId = SerializedEndpoint;
 using GameRoomId = unsigned int;
 
 class GameRoomManager {
@@ -17,22 +18,22 @@ public:
     explicit GameRoomManager() noexcept;
     ~GameRoomManager() = default;
 
-    bool JoinPlayer(ConnectionId playerId, GameRoomId roomId);
-    bool StartMatchMaking(ConnectionId playerId);
-    void StopMatchMaking(ConnectionId playerId);
+    bool JoinPlayer(ClientId clientId, GameRoomId roomId);
+    bool StartMatchMaking(ClientId clientId);
+    void StopMatchMaking(ClientId clientId);
 
-    void OnPlayerConnected(ConnectionId id);
-    void OnPlayerDisconnected(ConnectionId id);
+    void OnPlayerConnected(ClientId clientId);
+    void OnPlayerDisconnected(ClientId clientId);
 
     void Tick();
 
 private:
     GameRoomId mNewRoomId;
-    std::map<ConnectionId, GameRoomId> mRoomOfPlayers;
+    std::map<ClientId, GameRoomId> mRoomOfPlayers;
     std::map<GameRoomId, GameRoom> mGameRooms;
-    std::queue<ConnectionId> mMatchMakingPlayers;
+    std::queue<ClientId> mMatchMakingPlayers;
 
-    static bool CheckIfPlayerNotValid(ConnectionId id);
+    static bool CheckIfPlayerNotValid(ClientId clientId);
 };
 
 

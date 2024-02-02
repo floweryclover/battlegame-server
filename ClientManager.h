@@ -12,8 +12,6 @@
 #include "Message.h"
 #include "CtsRpc.h"
 
-using ConnectionId = unsigned int;
-
 class ClientManager {
 public:
     ClientManager(ClientManager&&) = delete;
@@ -23,18 +21,17 @@ public:
     explicit ClientManager(const char* listenIpAddress, unsigned short listenPort);
     ~ClientManager() = default;
 
-    inline ConnectionId IsClientExists(ConnectionId id) const { return mClients.find(id) != mClients.end(); }
+    inline bool IsClientExists(ClientId clientId) const { return mClients.find(clientId) != mClients.end(); }
 
     void ProcessNetworkIoOnce();
 
-    inline std::queue<std::pair<ConnectionId, Message>>& GetSendQueue() { return mSendQueue; }
+    inline std::queue<std::pair<ClientId, Message>>& GetSendQueue() { return mSendQueue; }
 private:
     CtsRpc mCtsRpc;
     std::unique_ptr<Socket> mpListenSocket;
-    std::queue<std::pair<ConnectionId, Message>> mSendQueue;
-    std::map<ConnectionId, Client> mClients;
+    std::queue<std::pair<ClientId, Message>> mSendQueue;
+    std::map<ClientId, Client> mClients;
     unsigned int mCurrentSent;
-    unsigned int mNewClientNumber;
 };
 
 

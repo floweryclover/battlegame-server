@@ -7,7 +7,8 @@
 
 #include <set>
 
-using ConnectionId = unsigned int;
+using SerializedEndpoint = unsigned long long;
+using ClientId = SerializedEndpoint;
 using GameRoomId = unsigned int;
 
 class GameRoom {
@@ -23,17 +24,17 @@ public:
 
     inline bool IsEmpty() const { return mJoinedPlayers.size() == 0; }
     inline bool IsFull() const { return mJoinedPlayers.size() == mMaxPlayerCount; }
-    inline bool IsPlayerJoined(ConnectionId id) const { return mJoinedPlayers.find(id) != mJoinedPlayers.end(); }
+    inline bool IsPlayerJoined(ClientId clientId) const { return mJoinedPlayers.find(clientId) != mJoinedPlayers.end(); }
     inline unsigned short GetMaxPlayerCount() const { return mMaxPlayerCount; }
     inline unsigned short GetCurrentPlayerCount() const { return mJoinedPlayers.size(); }
 
-    void OnPlayerJoined(ConnectionId id) noexcept;
-    void OnPlayerLeft(ConnectionId id) noexcept;
+    void OnPlayerJoined(ClientId clientId) noexcept;
+    void OnPlayerLeft(ClientId clientId) noexcept;
 
 private:
-    unsigned const int mRoomId;
+    GameRoomId mRoomId;
     unsigned short mMaxPlayerCount;
-    std::set<ConnectionId> mJoinedPlayers;
+    std::set<ClientId> mJoinedPlayers;
 };
 
 

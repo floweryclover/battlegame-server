@@ -5,15 +5,17 @@
 #ifndef BATTLEGAME_SERVER_CONTEXT_H
 #define BATTLEGAME_SERVER_CONTEXT_H
 
+using SerializedEndpoint = unsigned long long;
+using ClientId = SerializedEndpoint;
 
 class Context {
 public:
-    explicit Context(const unsigned int connectionId) : mConnectionId(connectionId) {};
+    explicit Context(const ClientId clientId) : mClientId(clientId) {};
     ~Context() = default;
 
-    inline unsigned int GetConnectionId() const { return mConnectionId; }
+    inline ClientId GetClientId() const { return mClientId; }
 private:
-    const unsigned int mConnectionId;
+    const ClientId mClientId;
 };
 
 

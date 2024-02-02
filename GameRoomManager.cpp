@@ -15,10 +15,10 @@ GameRoomManager::GameRoomManager() noexcept : mNewRoomId(GameRoom::ROOM_MATCHMAK
 
 void GameRoomManager::Tick()
 {
-    auto matchMakePlayer = [this](ConnectionId playerId)
+    auto matchMakePlayer = [this](ClientId clientId)
     {
-        if (CheckIfPlayerNotValid(playerId)
-            || mRoomOfPlayers[playerId] != GameRoom::ROOM_MATCHMAKING)
+        if (CheckIfPlayerNotValid(clientId)
+            || mRoomOfPlayers[clientId] != GameRoom::ROOM_MATCHMAKING)
         {
             return;
         }
@@ -32,13 +32,13 @@ void GameRoomManager::Tick()
 
             if (!roomPair.second.IsFull())
             {
-                JoinPlayer(playerId, roomPair.first);
+                JoinPlayer(clientId, roomPair.first);
                 return;
             }
         }
 
         mGameRooms.emplace(mNewRoomId, GameRoom(mNewRoomId));
-        JoinPlayer(playerId, mNewRoomId);
+        JoinPlayer(clientId, mNewRoomId);
         mNewRoomId++;
     };
 
@@ -50,56 +50,56 @@ void GameRoomManager::Tick()
     }
 }
 
-bool GameRoomManager::CheckIfPlayerNotValid(ConnectionId id)
+bool GameRoomManager::CheckIfPlayerNotValid(ClientId clientId)
 {
-    return !BattleGameServer::GetConstInstance().GetConstClientManager().IsClientExists(id);
+    return !BattleGameServer::GetConstInstance().GetConstClientManager().IsClientExists(clientId);
 }
 
-bool GameRoomManager::JoinPlayer(ConnectionId playerId, GameRoomId roomId)
+bool GameRoomManager::JoinPlayer(ClientId clientId, GameRoomId roomId)
 {
-    if (CheckIfPlayerNotValid(playerId) // 해당 클라이언트가 지금 접속해 있는지
+    if (CheckIfPlayerNotValid(clientId) // 해당 클라이언트가 지금 접속해 있는지
     || mGameRooms.find(roomId) == mGameRooms.end()) // 해당 방이 존재하는지
     {
         return false;
     }
 
-    mGameRooms.at(mRoomOfPlayers[playerId]).OnPlayerLeft(playerId);
-    mGameRooms.at(roomId).OnPlayerJoined(playerId);
-    mRoomOfPlayers[playerId] = roomId;
+    mGameRooms.at(mRoomOfPlayers[clientId]).OnPlayerLeft(clientId);
+    mGameRooms.at(roomId).OnPlayerJoined(clientId);
+    mRoomOfPlayers[clientId] = roomId;
     return true;
 }
 
-bool GameRoomManager::StartMatchMaking(ConnectionId playerId)
+bool GameRoomManager::StartMatchMaking(ClientId clientId)
 {
-    if (CheckIfPlayerNotValid(playerId)
-    || mRoomOfPlayers[playerId] != GameRoom::ROOM_MAINMENU)
+    if (CheckIfPlayerNotValid(clientId)
+    || mRoomOfPlayers[clientId] != GameRoom::ROOM_MAINMENU)
     {
         return false;
     }
 
-    JoinPlayer(playerId, GameRoom::ROOM_MATCHMAKING);
-    mMatchMakingPlayers.emplace(playerId);
+    JoinPlayer(clientId, GameRoom::ROOM_MATCHMAKING);
+    mMatchMakingPlayers.emplace(clientId);
     return true;
 }
 
-void GameRoomManager::StopMatchMaking(ConnectionId playerId)
+void GameRoomManager::StopMatchMaking(ClientId clientId)
 {
-    if (CheckIfPlayerNotValid(playerId)
-    || mRoomOfPlayers[playerId] != GameRoom::ROOM_MATCHMAKING)
+    if (CheckIfPlayerNotValid(clientId)
+    || mRoomOfPlayers[clientId] != GameRoom::ROOM_MATCHMAKING)
     {
         return;
     }
 
-    JoinPlayer(playerId, GameRoom::ROOM_MAINMENU);
+    JoinPlayer(clientId, GameRoom::ROOM_MAINMENU);
 }
 
-void GameRoomManager::OnPlayerConnected(ConnectionId id)
+void GameRoomManager::OnPlayerConnected(ClientId clientId)
 {
-    mRoomOfPlayers.emplace(id, GameRoom::ROOM_MAINMENU);
+    mRoomOfPlayers.emplace(clientId, GameRoom::ROOM_MAINMENU);
 }
 
-void GameRoomManager::OnPlayerDisconnected(ConnectionId id)
+void GameRoomManager::OnPlayerDisconnected(ClientId clientId)
 {
-    mGameRooms.at(mRoomOfPlayers[id]).OnPlayerLeft(id);
-    mRoomOfPlayers.erase(id);
+    mGameRooms.at(mRoomOfPlayers[clientId]).OnPlayerLeft(clientId);
+    mRoomOfPlayers.erase(clientId);
 }

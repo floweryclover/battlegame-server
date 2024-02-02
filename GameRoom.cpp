@@ -18,40 +18,40 @@ GameRoom::GameRoom(GameRoom &&rhs) noexcept : GameRoom(rhs.mRoomId)
 
 }
 
-void GameRoom::OnPlayerJoined(ConnectionId id) noexcept
+void GameRoom::OnPlayerJoined(ClientId clientId) noexcept
 {
-    mJoinedPlayers.insert(id);
+    mJoinedPlayers.insert(clientId);
     if (mRoomId == ROOM_MAINMENU)
     {
         return;
     }
     else if (mRoomId == ROOM_MATCHMAKING)
     {
-        std::cout << "플레이어 " << id << " 매치메이킹 시작" << std::endl;
+        std::cout << "플레이어 " << clientId << " 매치메이킹 시작" << std::endl;
         return;
     }
 
-    std::cout << "플레이어 " << id << " 방 " << mRoomId << " 참여" << std::endl;
+    std::cout << "플레이어 " << clientId << " 방 " << mRoomId << " 참여" << std::endl;
     BattleGameServer::GetInstance()
     .GetConstStcRpc()
-    .JoinedGameRoom(id);
+    .JoinedGameRoom(clientId);
 }
 
-void GameRoom::OnPlayerLeft(ConnectionId id) noexcept
+void GameRoom::OnPlayerLeft(ClientId clientId) noexcept
 {
-    mJoinedPlayers.erase(id);
+    mJoinedPlayers.erase(clientId);
     if (mRoomId == ROOM_MAINMENU)
     {
         return;
     }
     else if (mRoomId == ROOM_MATCHMAKING)
     {
-        std::cout << "플레이어 " << id << " 매치메이킹 종료" << std::endl;
+        std::cout << "플레이어 " << clientId << " 매치메이킹 종료" << std::endl;
         return;
     }
 
-    std::cout << "플레이어 " << id << " 방 " << mRoomId << " 퇴장" << std::endl;
+    std::cout << "플레이어 " << clientId << " 방 " << mRoomId << " 퇴장" << std::endl;
     BattleGameServer::GetInstance()
     .GetConstStcRpc()
-    .DisconnectedFromGame(id);
+    .DisconnectedFromGame(clientId);
 }

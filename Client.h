@@ -14,17 +14,18 @@
 #include "IoResult.h"
 
 using ErrorCode = int;
-using HeaderMessageType = int;
+using SerializedEndpoint = unsigned long long;
+using ClientId = SerializedEndpoint;
 
 class Client {
 public:
     Client(const Client& rhs) = delete;
     Client& operator=(const Client& rhs) = delete;
-    explicit Client(unsigned int connectionId, Socket&& socket) noexcept;
+    explicit Client(ClientId clientId, Socket&& socket) noexcept;
     Client(Client&& rhs) noexcept;
     ~Client() = default;
 
-    inline unsigned int GetConnectionId() const { return this->mConnectionId; }
+    inline ClientId GetClientId() const { return this->mClientId; }
     inline const Socket& GetSocket() const { return this->mSocket; }
 
     /***
@@ -35,7 +36,7 @@ public:
      */
     std::expected<std::optional<std::unique_ptr<class Message>>, std::optional<ErrorCode>> Receive();
 private:
-    const unsigned int mConnectionId;
+    const ClientId mClientId;
     const Socket mSocket;
     int mCurrentReceived;
     int mTotalSizeToReceive;

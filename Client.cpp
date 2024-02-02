@@ -15,9 +15,9 @@
 #include <cerrno>
 #endif
 
-Client::Client(unsigned int connectionId, Socket&& socket) noexcept : mConnectionId(connectionId), mSocket(std::move(socket)), mIsReceivingHeader(true), mCurrentReceived(0), mTotalSizeToReceive(HEADER_SIZE), mLastReceivedHeaderType(0){}
+Client::Client(ClientId clientId, Socket&& socket) noexcept : mClientId(clientId), mSocket(std::move(socket)), mIsReceivingHeader(true), mCurrentReceived(0), mTotalSizeToReceive(HEADER_SIZE), mLastReceivedHeaderType(0){}
 
-Client::Client(Client&& rhs) noexcept : Client(rhs.mConnectionId, const_cast<Socket&&>(std::move(rhs.mSocket))){}
+Client::Client(Client&& rhs) noexcept : Client(rhs.mClientId, const_cast<Socket&&>(std::move(rhs.mSocket))){}
 
 std::expected<std::optional<std::unique_ptr<Message>>, std::optional<ErrorCode>> Client::Receive() {
     int sizeToReceive = mTotalSizeToReceive - mCurrentReceived;

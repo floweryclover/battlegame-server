@@ -24,10 +24,10 @@ void CtsRpc::OnRequestMatchMaking(const Context& context) const
     BattleGameServer::GetInstance()
     .GetGameData()
     .GetGameRoomManager()
-    .StartMatchMaking(context.GetConnectionId());
+    .StartMatchMaking(context.GetClientId());
 }
 
 void CtsRpc::OnEnterNickname(const Context &context, std::string &&nickname) const
 {
-    BattleGameServer::GetInstance().GetGameData().SetPlayerNickname(context.GetConnectionId(), nickname);
+    BattleGameServer::GetInstance().GetGameData().SetPlayerNickname(context.GetClientId(), nickname);
 }
