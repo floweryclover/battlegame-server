@@ -51,7 +51,7 @@ ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenP
     assert(result != -1);
 }
 
-void ClientManager::ProcessNetworkIoOnce()
+void ClientManager::Tick()
 {
     struct sockaddr_in clientAddr {};
     int clientAddrLen = sizeof(clientAddr);

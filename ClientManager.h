@@ -23,7 +23,7 @@ public:
 
     inline bool IsClientExists(ClientId clientId) const { return mClients.find(clientId) != mClients.end(); }
 
-    void ProcessNetworkIoOnce();
+    void Tick();
 
     inline std::queue<std::pair<ClientId, Message>>& GetSendQueue() { return mSendQueue; }
 private:
