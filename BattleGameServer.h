@@ -10,6 +10,7 @@
 class ClientManager;
 class GameData;
 class StcRpc;
+class CtsRpc;
 
 class BattleGameServer {
 public:
@@ -32,13 +33,17 @@ public:
     inline StcRpc& GetStcRpc() noexcept { return const_cast<StcRpc&>(GetConstStcRpc()); }
     inline const StcRpc& GetConstStcRpc() const noexcept { return *this->mpStcRpc; }
 
-    void Tick();
+    inline CtsRpc& GetCtsRpc() noexcept { return const_cast<CtsRpc&>(GetConstCtsRpc()); }
+    inline const CtsRpc& GetConstCtsRpc() const noexcept { return *this->mpCtsRpc; }
+
+    void InvokeTick();
 private:
     BattleGameServer() = default;
     static std::unique_ptr<BattleGameServer> spSingleton;
     std::unique_ptr<ClientManager> mpClientManager;
     std::unique_ptr<GameData> mpGameData;
     std::unique_ptr<StcRpc> mpStcRpc;
+    std::unique_ptr<CtsRpc> mpCtsRpc;
 };
 
 

@@ -77,9 +77,9 @@ void ClientManager::Tick()
 #endif
         assert(result != -1);
         ClientId serialized = (ntohl(clientAddr.sin_addr.s_addr) << 16) + (ntohs(clientAddr.sin_port));
-        std::cout << "[접속] 클라이언트 " << serialized << std::endl;
         BattleGameServer::GetInstance().GetGameData().OnPlayerConnected(serialized);
         mClients.emplace(serialized, Client(serialized, std::move(clientSocket)));
+        this->InvokeOnPlayerConnected(serialized);
     }
 
     if (!mSendQueue.empty())
@@ -96,7 +96,7 @@ void ClientManager::Tick()
 
             const char* pSendBuffer = (mCurrentSent < HEADER_SIZE ? reinterpret_cast<const char*>(&message) : message.mBodyBuffer) + mCurrentSent;
             int lengthToSend = (mCurrentSent < HEADER_SIZE ? HEADER_SIZE : message.mHeaderBodySize) - mCurrentSent;
-            int result = send(targetClient.GetSocket().AsHandle(), pSendBuffer, lengthToSend, 0);
+            int result = send(targetClient.GetTcpSocket().AsHandle(), pSendBuffer, lengthToSend, 0);
             if (result < 0)
             {
 #ifdef _WIN32
@@ -133,27 +133,22 @@ void ClientManager::Tick()
     for (auto iter = mClients.begin(); iter != mClients.end();)
     {
         Client& client = iter->second;
-
-        auto receiveResult = client.Receive();
-        if (receiveResult.has_value())
-        {
-            if (receiveResult.value().has_value())
-            {
-                Context context(client.GetClientId());
-                mCtsRpc.HandleMessage(context, *receiveResult.value().value());
-            }
-        }
-        else
-        {
-            if (receiveResult.error().has_value())
-            {
-                std::cerr << "[에러] 클라이언트 " << client.GetClientId() << " 에게서 데이터를 수신하던 도중 에러가 발생하였습니다: 에러 코드 " << receiveResult.error().value() << "." << std::endl;
-            }
-            std::cout << "[접속 해제] 클라이언트 " << client.GetClientId() << std::endl;
-            BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(client.GetClientId());
-            mClients.erase(iter++);
-            continue;
-        }
+        client.Tick();
         iter++;
     }
+}
+
+void ClientManager::InvokeOnPlayerDisconnected(ClientId clientId)
+{
+    std::cout << "[접속 해제] 클라이언트 " << clientId << std::endl;
+    BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(clientId);
+    mClients.erase(clientId);
+    BattleGameServer::GetInstance()
+    .GetGameData()
+    .OnPlayerDisconnected(clientId);
+}
+
+void ClientManager::InvokeOnPlayerConnected(ClientId clientId)
+{
+    std::cout << "[접속] 클라이언트 " << clientId << std::endl;
 }

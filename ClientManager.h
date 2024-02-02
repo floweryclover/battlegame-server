@@ -10,7 +10,6 @@
 #include <memory>
 #include "Client.h"
 #include "Message.h"
-#include "CtsRpc.h"
 
 class ClientManager {
 public:
@@ -24,10 +23,11 @@ public:
     inline bool IsClientExists(ClientId clientId) const { return mClients.find(clientId) != mClients.end(); }
 
     void Tick();
+    void InvokeOnPlayerDisconnected(ClientId clientId);
 
     inline std::queue<std::pair<ClientId, Message>>& GetSendQueue() { return mSendQueue; }
 private:
-    CtsRpc mCtsRpc;
+    void InvokeOnPlayerConnected(ClientId clientId);
     std::unique_ptr<Socket> mpListenSocket;
     std::queue<std::pair<ClientId, Message>> mSendQueue;
     std::map<ClientId, Client> mClients;

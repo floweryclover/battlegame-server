@@ -4,6 +4,11 @@
 
 #include "Client.h"
 #include "Message.h"
+#include "Context.h"
+#include "CtsRpc.h"
+#include "BattleGameServer.h"
+#include "ClientManager.h"
+#include <iostream>
 #include <utility>
 #include <memory>
 #include <cstring>
@@ -15,13 +20,38 @@
 #include <cerrno>
 #endif
 
-Client::Client(ClientId clientId, Socket&& socket) noexcept : mClientId(clientId), mSocket(std::move(socket)), mIsReceivingHeader(true), mCurrentReceived(0), mTotalSizeToReceive(HEADER_SIZE), mLastReceivedHeaderType(0){}
+Client::Client(ClientId clientId, Socket&& socket) noexcept : mClientId(clientId), mTcpSocket(std::move(socket)), mIsReceivingHeader(true), mCurrentReceived(0), mTotalSizeToReceive(HEADER_SIZE), mLastReceivedHeaderType(0){}
 
-Client::Client(Client&& rhs) noexcept : Client(rhs.mClientId, const_cast<Socket&&>(std::move(rhs.mSocket))){}
+Client::Client(Client&& rhs) noexcept : Client(rhs.mClientId, const_cast<Socket&&>(std::move(rhs.mTcpSocket))){}
 
-std::expected<std::optional<std::unique_ptr<Message>>, std::optional<ErrorCode>> Client::Receive() {
+void Client::Tick()
+{
+    auto receiveResult = this->ReceiveTcp();
+    if (receiveResult.has_value())
+    {
+        if (receiveResult.value().has_value())
+        {
+            Context context(mClientId);
+            BattleGameServer::GetConstInstance()
+            .GetConstCtsRpc()
+            .HandleMessage(context, *receiveResult.value().value());
+        }
+    }
+    else
+    {
+        if (receiveResult.error().has_value())
+        {
+            std::cerr << "[에러] 클라이언트 " << mClientId << " 에게서 데이터를 수신하던 도중 에러가 발생하였습니다: 에러 코드 " << receiveResult.error().value() << "." << std::endl;
+        }
+        BattleGameServer::GetInstance()
+        .GetClientManager()
+        .InvokeOnPlayerDisconnected(mClientId);
+    }
+}
+
+std::expected<std::optional<std::unique_ptr<Message>>, std::optional<ErrorCode>> Client::ReceiveTcp() {
     int sizeToReceive = mTotalSizeToReceive - mCurrentReceived;
-    int result = recv(GetSocket().AsHandle(), mReceiveBuffer.data() + mCurrentReceived, sizeToReceive, 0);
+    int result = recv(GetTcpSocket().AsHandle(), mReceiveBuffer.data() + mCurrentReceived, sizeToReceive, 0);
     if (result == -1)
     {
         int errorCode = errno;
