@@ -6,7 +6,7 @@
 #include <cstring>
 #include <cassert>
 
-Message::Message(const int headerBodySize, const int headerMessageType, const char* const bodyOnlySource) : mHeaderBodySize(headerBodySize), mHeaderMessageType(headerMessageType)
+Message::Message(const int headerBodySize, const int headerMessageType, const char* const bodyOnlySource) noexcept : mHeaderBodySize(headerBodySize), mHeaderMessageType(headerMessageType)
 {
     if (headerBodySize > 0)
     {
@@ -20,6 +20,8 @@ Message::Message(const int headerBodySize, const int headerMessageType, const ch
         mBodyBuffer = nullptr;
     }
 }
+
+Message::Message() noexcept : mHeaderBodySize(0), mHeaderMessageType(0), mBodyBuffer(nullptr) {}
 
 Message::~Message()
 {

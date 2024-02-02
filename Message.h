@@ -9,7 +9,8 @@
 
 class Message {
 public:
-    Message(const int headerBodySize, const int headerMessageType, const char* const bodyOnlySource);
+    explicit Message(const int headerBodySize, const int headerMessageType, const char* const bodyOnlySource) noexcept;
+    explicit Message() noexcept;
     ~Message();
     int mHeaderBodySize;
     int mHeaderMessageType;
