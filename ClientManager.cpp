@@ -195,6 +195,6 @@ void ClientManager::InvokeOnPlayerDisconnected(ClientId clientId)
 
 void ClientManager::InvokeOnPlayerConnected(ClientId clientId)
 {
-    std::cout << "[접속] 클라이언트 " << clientId << std::endl;
+    std::cout << "[접속] 클라이언트 " << clientId <<  " (" << mClients.at(clientId).GetEndpointString() << ")" << std::endl;
     BattleGameServer::GetInstance().GetGameData().OnPlayerConnected(clientId);
 }
