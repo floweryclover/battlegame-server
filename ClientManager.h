@@ -8,6 +8,7 @@
 #include <map>
 #include <queue>
 #include <memory>
+#include <array>
 #include "Client.h"
 #include "Message.h"
 
@@ -32,6 +33,9 @@ private:
     std::queue<std::pair<ClientId, Message>> mSendQueue;
     std::map<ClientId, Client> mClients;
     unsigned int mCurrentSent;
+
+    std::unique_ptr<Socket> mpUdpSocket;
+    std::array<char, MAX_MESSAGE_SIZE> mUdpReceiveBuffer;
 };
 
 

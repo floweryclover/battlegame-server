@@ -8,6 +8,7 @@
 #include "BattleGameServer.h"
 #include "GameData.h"
 #include "StcRpc.h"
+#include "CtsRpc.h"
 #include "Constants.h"
 #include "Context.h"
 #include "Socket.h"
@@ -25,8 +26,12 @@
 ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenPort) : mCurrentSent(0)
 {
     mpListenSocket = std::make_unique<Socket>(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
+    mpUdpSocket = std::make_unique<Socket>(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
+
     int option = 1;
     int result = setsockopt(mpListenSocket->AsHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    assert(result != -1);
+    result = setsockopt(mpUdpSocket->AsHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     assert(result != -1);
 
     struct sockaddr_in sockAddrIn {};
@@ -37,6 +42,8 @@ ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenP
     sockAddrIn.sin_port = htons(listenPort);
     result = bind(mpListenSocket->AsHandle(), (struct sockaddr*)&sockAddrIn, sizeof(sockAddrIn));
     assert(result != -1);
+    result = bind(mpUdpSocket->AsHandle(), (struct sockaddr*)&sockAddrIn, sizeof(sockAddrIn));
+    assert(result != -1);
 
     result = listen(mpListenSocket->AsHandle(), 8);
     assert(result != -1);
@@ -44,11 +51,17 @@ ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenP
 #ifdef _WIN32
     u_long nonblockingFlag = 1;
     result = ioctlsocket(mpListenSocket->AsHandle(), FIONBIO, &nonblockingFlag);
+    assert(result != -1);
+    result = ioctlsocket(mpUdpSocket->AsHandle(), FIONBIO, &nonblockingFlag);
+    assert(result != -1);
 #elifdef linux
     unsigned long nonblockingFlag = 1;
     result = ioctl(mpListenSocket->AsHandle(), FIONBIO, &nonblockingFlag);
-#endif
     assert(result != -1);
+    result = ioctl(mpUdpSocket->AsHandle(), FIONBIO, &nonblockingFlag);
+    assert(result != -1);
+#endif
+
 }
 
 void ClientManager::Tick()
@@ -77,8 +90,8 @@ void ClientManager::Tick()
 #endif
         assert(result != -1);
         ClientId serialized = (ntohl(clientAddr.sin_addr.s_addr) << 16) + (ntohs(clientAddr.sin_port));
-        BattleGameServer::GetInstance().GetGameData().OnPlayerConnected(serialized);
         mClients.emplace(serialized, Client(serialized, std::move(clientSocket)));
+        BattleGameServer::GetInstance().GetGameData().OnPlayerConnected(serialized);
         this->InvokeOnPlayerConnected(serialized);
     }
 
@@ -135,6 +148,37 @@ void ClientManager::Tick()
         Client& client = iter->second;
         client.Tick();
         iter++;
+    }
+
+    struct sockaddr_in udpReceiveAddr {};
+    int udpReceiveAddrSize = sizeof(udpReceiveAddr);
+    int result = recvfrom(mpUdpSocket->AsHandle(), mUdpReceiveBuffer.data(), MAX_MESSAGE_SIZE, 0, reinterpret_cast<struct sockaddr*>(&udpReceiveAddr), reinterpret_cast<socklen_t*>(&udpReceiveAddrSize));
+    if (result < 0)
+    {
+        int errorCode = errno;
+        assert(errorCode == EWOULDBLOCK);
+    }
+    else
+    {
+        assert(result > 0);
+
+        SerializedEndpoint serialized = (ntohl(udpReceiveAddr.sin_addr.s_addr) << 16) + (ntohs(udpReceiveAddr.sin_port));
+        if (!mClients.contains(serialized))
+        {
+            std::cerr << "정상적으로 접속처리되지 않은 클라이언트로부터 UDP 패킷을 수신했습니다: " << inet_ntoa(udpReceiveAddr.sin_addr) << ":" << ntohs(udpReceiveAddr.sin_port) << std::endl;
+        }
+        else
+        {
+            Message message;
+            memcpy(&message.mHeaderBodySize, mUdpReceiveBuffer.data(), 4);
+            memcpy(&message.mHeaderMessageType, mUdpReceiveBuffer.data()+4, 4);
+            char* body = new char[message.mHeaderBodySize];
+            memcpy(body, mUdpReceiveBuffer.data()+8, message.mHeaderBodySize);
+            message.mBodyBuffer = body;
+            BattleGameServer::GetConstInstance()
+            .GetConstCtsRpc()
+            .HandleMessage(Context(serialized), message);
+        }
     }
 }
 
