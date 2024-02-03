@@ -90,8 +90,7 @@ void ClientManager::Tick()
 #endif
         assert(result != -1);
         ClientId serialized = (ntohl(clientAddr.sin_addr.s_addr) << 16) + (ntohs(clientAddr.sin_port));
-        mClients.emplace(serialized, Client(serialized, std::move(clientSocket)));
-        BattleGameServer::GetInstance().GetGameData().OnPlayerConnected(serialized);
+        mClients.emplace(serialized, Client(serialized, std::move(clientSocket), &clientAddr, clientAddrLen));
         this->InvokeOnPlayerConnected(serialized);
     }
 
@@ -126,9 +125,7 @@ void ClientManager::Tick()
             else if (result == 0)
             {
                 std::cout << "[접속 해제] 클라이언트 " << targetClient.GetClientId() << std::endl;
-                BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(targetClient.GetClientId());
-                mCurrentSent = 0;
-                mClients.erase(targetClient.GetClientId());
+                InvokeOnPlayerDisconnected(targetClient.GetClientId());
                 mSendQueue.pop();
             }
             else
@@ -145,6 +142,10 @@ void ClientManager::Tick()
 
     for (auto iter = mClients.begin(); iter != mClients.end();)
     {
+        if (!mClients.contains(iter->first))
+        {
+            continue;
+        }
         Client& client = iter->second;
         client.Tick();
         iter++;
@@ -184,7 +185,7 @@ void ClientManager::Tick()
 
 void ClientManager::InvokeOnPlayerDisconnected(ClientId clientId)
 {
-    std::cout << "[접속 해제] 클라이언트 " << clientId << std::endl;
+    std::cout << "[접속 해제] 클라이언트 " << clientId << " (" << mClients.at(clientId).GetEndpointString() << ")" << std::endl;
     BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(clientId);
     mClients.erase(clientId);
     BattleGameServer::GetInstance()
@@ -195,4 +196,5 @@ void ClientManager::InvokeOnPlayerDisconnected(ClientId clientId)
 void ClientManager::InvokeOnPlayerConnected(ClientId clientId)
 {
     std::cout << "[접속] 클라이언트 " << clientId << std::endl;
+    BattleGameServer::GetInstance().GetGameData().OnPlayerConnected(clientId);
 }

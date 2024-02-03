@@ -9,6 +9,7 @@
 #include <expected>
 #include <optional>
 #include <memory>
+#include <string>
 #include "Socket.h"
 #include "Constants.h"
 #include "IoResult.h"
@@ -21,15 +22,21 @@ class Client {
 public:
     Client(const Client& rhs) = delete;
     Client& operator=(const Client& rhs) = delete;
-    explicit Client(ClientId clientId, Socket&& socket) noexcept;
+
+    explicit Client(ClientId clientId, Socket&& tcpSocket, const struct sockaddr_in* pSockaddrIn, int addrLen) noexcept;
     Client(Client&& rhs) noexcept;
-    ~Client() = default;
+    ~Client();
 
     inline ClientId GetClientId() const { return this->mClientId; }
     inline const Socket& GetTcpSocket() const { return this->mTcpSocket; }
+    inline const struct sockaddr_in* GetSockAddrIn() const { return this->mpSockaddrIn.get(); }
+    inline const std::string& GetEndpointString() const { return this->mEndpoint; }
 
     void Tick();
 private:
+    std::string mEndpoint;
+    std::unique_ptr<struct sockaddr_in> mpSockaddrIn;
+    int mAddrLen;
     std::expected<std::optional<std::unique_ptr<class Message>>, std::optional<ErrorCode>> ReceiveTcp();
     const ClientId mClientId;
     const Socket mTcpSocket;
