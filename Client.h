@@ -28,18 +28,20 @@ public:
     ~Client();
 
     inline ClientId GetClientId() const { return this->mClientId; }
-    inline const Socket& GetTcpSocket() const { return this->mTcpSocket; }
-    inline const struct sockaddr_in* GetSockAddrIn() const { return this->mpSockaddrIn.get(); }
+    inline Socket& GetTcpSocket() { return this->mTcpSocket; }
+    inline const struct sockaddr_in* GetTcpSockAddrIn() const { return this->mpTcpSockaddrIn.get(); }
+    inline int GetTcpSockAddrLen() { return this->mAddrLen; }
     inline const std::string& GetEndpointString() const { return this->mEndpoint; }
 
     void Tick();
 private:
     std::string mEndpoint;
-    std::unique_ptr<struct sockaddr_in> mpSockaddrIn;
+    std::unique_ptr<struct sockaddr_in> mpTcpSockaddrIn;
+    std::unique_ptr<struct sockaddr_in> mpUdpSockaddrIn;
     int mAddrLen;
     std::expected<std::optional<std::unique_ptr<class Message>>, std::optional<ErrorCode>> ReceiveTcp();
-    const ClientId mClientId;
-    const Socket mTcpSocket;
+    ClientId mClientId;
+    Socket mTcpSocket;
     int mCurrentReceived;
     int mTotalSizeToReceive;
     int mLastReceivedHeaderType;
