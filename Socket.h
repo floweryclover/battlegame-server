@@ -22,6 +22,7 @@ public:
     Socket(Socket&& rhs) noexcept;
     ~Socket();
 
+    void Shutdown();
     inline SOCKET AsHandle() const { return this->mSocketHandle; }
 private:
     SOCKET mSocketHandle;
