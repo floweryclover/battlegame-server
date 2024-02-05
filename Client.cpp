@@ -28,17 +28,18 @@ mIsReceivingHeader(true),
 mCurrentReceived(0),
 mTotalSizeToReceive(HEADER_SIZE),
 mLastReceivedHeaderType(0),
+mpUdpSockaddrIn(nullptr),
 mAddrLen(addrLen)
 {
-    mpSockaddrIn = std::make_unique<struct sockaddr_in>();
-    memcpy(mpSockaddrIn.get(), pSockAddrIn, addrLen);
+    mpTcpSockaddrIn = std::make_unique<struct sockaddr_in>();
+    memcpy(mpTcpSockaddrIn.get(), pSockAddrIn, addrLen);
     std::string endpoint(inet_ntoa(pSockAddrIn->sin_addr));
     endpoint += ":";
     endpoint += std::to_string(ntohs(pSockAddrIn->sin_port));
     mEndpoint = std::move(endpoint);
 }
 
-Client::Client(Client&& rhs) noexcept : Client(rhs.mClientId, const_cast<Socket&&>(std::move(rhs.mTcpSocket)), rhs.mpSockaddrIn.release(), rhs.mAddrLen) {}
+Client::Client(Client&& rhs) noexcept : Client(rhs.mClientId, const_cast<Socket&&>(std::move(rhs.mTcpSocket)), rhs.mpTcpSockaddrIn.release(), rhs.mAddrLen) {}
 
 Client::~Client() {}
 
@@ -49,7 +50,7 @@ void Client::Tick()
     {
         if (receiveResult.value().has_value())
         {
-            Context context(mClientId);
+            Context context(mClientId, SendReliability::RELIABLE);
             BattleGameServer::GetConstInstance()
             .GetConstCtsRpc()
             .HandleMessage(context, *receiveResult.value().value());

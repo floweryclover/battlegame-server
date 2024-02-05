@@ -1,4 +1,6 @@
 #include <iostream>
+#include <thread>
+#include <chrono>
 #include "BattleGameServer.h"
 
 int main(int argc, char* argv[])
@@ -16,6 +18,7 @@ int main(int argc, char* argv[])
     while (true)
     {
         BattleGameServer::GetInstance().InvokeTick();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
     return 0;

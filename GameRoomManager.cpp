@@ -6,6 +6,7 @@
 #include "GameData.h"
 #include "BattleGameServer.h"
 #include "ClientManager.h"
+#include <iostream>
 
 GameRoomManager::GameRoomManager() noexcept : mNewRoomId(GameRoom::ROOM_MATCHMAKING+1)
 {
@@ -76,7 +77,6 @@ bool GameRoomManager::StartMatchMaking(ClientId clientId)
     {
         return false;
     }
-
     JoinPlayer(clientId, GameRoom::ROOM_MATCHMAKING);
     mMatchMakingPlayers.emplace(clientId);
     return true;

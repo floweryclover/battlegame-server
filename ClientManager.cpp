@@ -103,11 +103,11 @@ void ClientManager::Tick()
         }
         else
         {
-            const Client& targetClient = mClients.at(messagePair.first);
+            Client& targetClient = mClients.at(messagePair.first);
             const Message& message = messagePair.second;
 
-            const char* pSendBuffer = (mCurrentSent < HEADER_SIZE ? reinterpret_cast<const char*>(&message) : message.mBodyBuffer) + mCurrentSent;
-            int lengthToSend = (mCurrentSent < HEADER_SIZE ? HEADER_SIZE : message.mHeaderBodySize) - mCurrentSent;
+            const char* pSendBuffer = (mCurrentSent < HEADER_SIZE ? reinterpret_cast<const char*>(&message) : message.mpBodyBuffer.get() - HEADER_SIZE) + mCurrentSent;
+            int lengthToSend = (mCurrentSent < HEADER_SIZE ? HEADER_SIZE : message.mHeaderBodySize + HEADER_SIZE) - mCurrentSent;
             int result = send(targetClient.GetTcpSocket().AsHandle(), pSendBuffer, lengthToSend, 0);
             if (result < 0)
             {
@@ -144,11 +144,11 @@ void ClientManager::Tick()
     {
         if (!mClients.contains(iter->first))
         {
+            iter++;
             continue;
         }
-        Client& client = iter->second;
+        Client& client = (iter++)->second;
         client.Tick();
-        iter++;
     }
 
     struct sockaddr_in udpReceiveAddr {};
@@ -164,37 +164,118 @@ void ClientManager::Tick()
         assert(result > 0);
 
         SerializedEndpoint serialized = (ntohl(udpReceiveAddr.sin_addr.s_addr) << 16) + (ntohs(udpReceiveAddr.sin_port));
-        if (!mClients.contains(serialized))
+        Message message;
+        memcpy(&message.mHeaderBodySize, mUdpReceiveBuffer.data(), 4);
+        memcpy(&message.mHeaderMessageType, mUdpReceiveBuffer.data()+4, 4);
+        char* body = new char[message.mHeaderBodySize];
+        memcpy(body, mUdpReceiveBuffer.data()+8, message.mHeaderBodySize);
+        message.mpBodyBuffer = std::unique_ptr<char>(body);
+        if (!mUdpTcpMap.contains(serialized))
         {
-            std::cerr << "정상적으로 접속처리되지 않은 클라이언트로부터 UDP 패킷을 수신했습니다: " << inet_ntoa(udpReceiveAddr.sin_addr) << ":" << ntohs(udpReceiveAddr.sin_port) << std::endl;
+            // 첫 UDP 메시지의 경우 무조건 토큰을 담고 있음
+            // 그렇지 않은 경우 유효하지 않은 UDP 연결이라고 간주
+            if (message.mHeaderMessageType != CtsRpc::CTS_ACK_UDP_TOKEN)
+            {
+                std::cerr << "클라이언트 UDP:" << serialized << " 가 유효하지 않은 UDP 인증 토큰을 보냈거나 인증되지 않은 연결입니다." << std::endl;
+            }
+            else
+            {
+                ClientId token;
+                memcpy(&token, message.mpBodyBuffer.get(), 8);
+                if (mTcpUdpMap.contains(token))
+                {
+                    std::cerr << "클라이언트 UDP:" << serialized << " 가 UDP 인증 토큰을 보냈으나 해당 TCP 소켓과 일치하는 UDP 소켓이 이미 등록되어 있습니다." << std::endl;
+                }
+                else
+                {
+                    mUdpTcpMap.emplace(serialized, token);
+                    mTcpUdpMap.emplace(token, serialized);
+                    std::cout << "클라이언트 " << token << ": UDP ID " << serialized << " 연결" << std::endl;
+                }
+            }
         }
         else
         {
-            Message message;
-            memcpy(&message.mHeaderBodySize, mUdpReceiveBuffer.data(), 4);
-            memcpy(&message.mHeaderMessageType, mUdpReceiveBuffer.data()+4, 4);
-            char* body = new char[message.mHeaderBodySize];
-            memcpy(body, mUdpReceiveBuffer.data()+8, message.mHeaderBodySize);
-            message.mBodyBuffer = body;
+            // TCP 소켓 ID로 변환해서 호출
             BattleGameServer::GetConstInstance()
             .GetConstCtsRpc()
-            .HandleMessage(Context(serialized), message);
+            .HandleMessage(Context(mUdpTcpMap.at(serialized), SendReliability::UNRELIABLE), message);
         }
     }
+}
+
+void ClientManager::RequestSendMessage(MessageReliability reliability, ClientId targetClientId, Message&& message)
+{
+    if (!mClients.contains(targetClientId))
+    {
+        return;
+    }
+
+    if (reliability == MessageReliability::RELIABLE)
+    {
+        mSendQueue.emplace(targetClientId, std::move(message));
+    }
+    else
+    {
+        memcpy(mUdpSendBuffer.data(), &message.mHeaderBodySize, 4);
+        memcpy(mUdpSendBuffer.data()+4, &message.mHeaderMessageType, 4);
+        memcpy(mUdpSendBuffer.data()+8, message.mpBodyBuffer.get(), message.mHeaderBodySize);
+        int result = sendto(mpUdpSocket->AsHandle(), mUdpSendBuffer.data(), 4+4+message.mHeaderBodySize, 0, reinterpret_cast<const struct sockaddr*>(mClients.at(
+                targetClientId).GetTcpSockAddrIn()), static_cast<socklen_t>(mClients.at(
+                targetClientId).GetTcpSockAddrLen()));
+        if (result < 0)
+        {
+            int errorCode = errno;
+            if (errno == EWOULDBLOCK)
+            {
+                std::cerr << "[전송 에러] 클라이언트 " << targetClientId << " 에게 비신뢰성 메시지를 전송하려 했으나 Would block 상태입니다." << std::endl;
+            }
+            else
+            {
+                std::cerr << "[전송 에러] 클라이언트 " << targetClientId << " 에게 비신뢰성 메시지를 전송하던 도중 에러가 발생하였습니다: " << errorCode << std::endl;
+            }
+
+        }
+    }
+}
+
+bool ClientManager::KickPlayer(ClientId clientId)
+{
+    if (!mClients.contains(clientId))
+    {
+        return false;
+    }
+
+    mClients.at(clientId).GetTcpSocket().Shutdown();
+    return true;
 }
 
 void ClientManager::InvokeOnPlayerDisconnected(ClientId clientId)
 {
     std::cout << "[접속 해제] 클라이언트 " << clientId << " (" << mClients.at(clientId).GetEndpointString() << ")" << std::endl;
-    BattleGameServer::GetInstance().GetGameData().OnPlayerDisconnected(clientId);
-    mClients.erase(clientId);
+
+    if (mTcpUdpMap.contains(clientId))
+    {
+        mUdpTcpMap.erase(mTcpUdpMap.at(clientId));
+        mTcpUdpMap.erase(clientId);
+    }
+
     BattleGameServer::GetInstance()
     .GetGameData()
     .OnPlayerDisconnected(clientId);
+    mClients.erase(clientId);
 }
 
 void ClientManager::InvokeOnPlayerConnected(ClientId clientId)
 {
+    // mClient에 유저를 넣는 것은 accept()하는 부분에서 진행
     std::cout << "[접속] 클라이언트 " << clientId <<  " (" << mClients.at(clientId).GetEndpointString() << ")" << std::endl;
-    BattleGameServer::GetInstance().GetGameData().OnPlayerConnected(clientId);
+
+    BattleGameServer::GetInstance()
+    .GetGameData()
+    .OnPlayerConnected(clientId);
+
+    BattleGameServer::GetConstInstance()
+    .GetConstStcRpc()
+    .AssignUdpToken(clientId);
 }

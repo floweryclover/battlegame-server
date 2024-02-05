@@ -31,4 +31,5 @@ add_executable(battlegame_server main.cpp
         ClientManager.h
         BattleGameServer.cpp
         BattleGameServer.h
+        Enums.h
 )

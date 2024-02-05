@@ -11,10 +11,11 @@ class Message {
 public:
     explicit Message(const int headerBodySize, const int headerMessageType, const char* const bodyOnlySource) noexcept;
     explicit Message() noexcept;
-    ~Message();
+    Message(Message&& rhs) noexcept;
+    ~Message() = default;
     int mHeaderBodySize;
     int mHeaderMessageType;
-    char* mBodyBuffer;
+    std::unique_ptr<char> mpBodyBuffer;
 };
 
 

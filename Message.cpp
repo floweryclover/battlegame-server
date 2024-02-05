@@ -11,23 +11,17 @@ Message::Message(const int headerBodySize, const int headerMessageType, const ch
     if (headerBodySize > 0)
     {
         assert(bodyOnlySource != nullptr);
-        mBodyBuffer = new char[mHeaderBodySize];
-        memcpy(mBodyBuffer, bodyOnlySource, headerBodySize);
+        char* pBodyBuffer = new char[mHeaderBodySize];
+        memcpy(pBodyBuffer, bodyOnlySource, headerBodySize);
+        mpBodyBuffer = std::unique_ptr<char>(pBodyBuffer);
     }
     else
     {
         assert(bodyOnlySource == nullptr);
-        mBodyBuffer = nullptr;
+        mpBodyBuffer = nullptr;
     }
 }
 
-Message::Message() noexcept : mHeaderBodySize(0), mHeaderMessageType(0), mBodyBuffer(nullptr) {}
+Message::Message() noexcept : mHeaderBodySize(0), mHeaderMessageType(0), mpBodyBuffer(nullptr) {}
 
-Message::~Message()
-{
-    if (mBodyBuffer != nullptr)
-    {
-        delete[] mBodyBuffer;
-    }
-}
-
+Message::Message(Message&& rhs) noexcept : mHeaderBodySize(rhs.mHeaderBodySize), mHeaderMessageType(rhs.mHeaderMessageType), mpBodyBuffer(std::move(rhs.mpBodyBuffer)) {}

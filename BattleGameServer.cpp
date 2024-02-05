@@ -19,12 +19,7 @@ void BattleGameServer::Initialize(const char* listenAddress, unsigned short list
 
     spSingleton->mpClientManager = std::make_unique<ClientManager>(listenAddress, listenPort);
     spSingleton->mpGameData = std::make_unique<GameData>();
-    spSingleton->mpStcRpc = std::make_unique<StcRpc>(
-            [](unsigned int clientId, Message&& message)
-            {
-                BattleGameServer::GetInstance().GetClientManager().GetSendQueue().emplace(clientId, std::move(message));
-            }
-            );
+    spSingleton->mpStcRpc = std::make_unique<StcRpc>();
     spSingleton->mpCtsRpc = std::make_unique<CtsRpc>();
 }
 

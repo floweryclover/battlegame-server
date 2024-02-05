@@ -25,6 +25,11 @@ Socket::Socket(Socket &&rhs) noexcept
 
 Socket::~Socket()
 {
+    Shutdown();
+}
+
+void Socket::Shutdown()
+{
     if (mSocketHandle != INVALID_SOCKET)
     {
 #ifdef _WIN32
@@ -37,5 +42,4 @@ Socket::~Socket()
         mSocketHandle = INVALID_SOCKET;
     }
 }
-
 

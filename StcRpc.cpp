@@ -4,20 +4,24 @@
 
 #include "StcRpc.h"
 #include "Message.h"
+#include "BattleGameServer.h"
+#include "ClientManager.h"
+#include <iostream>
 
-StcRpc::StcRpc(std::function<void(unsigned int, Message&&)> sendEnqueue) noexcept : mSendEnqueue(std::move(sendEnqueue))
-{
-
-}
-
-void StcRpc::JoinedGameRoom(ConnectionId to) const noexcept
+void StcRpc::JoinedGameRoom(ClientId to) const noexcept
 {
     Message message(0, STC_JOINED_GAME_ROOM, nullptr);
-    mSendEnqueue(to, std::move(message));
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }
 
-void StcRpc::DisconnectedFromGame(ConnectionId to) const noexcept
+void StcRpc::DisconnectedFromGame(ClientId to) const noexcept
 {
     Message message(0, STC_DISCONNECTED_FROM_GAME, nullptr);
-    mSendEnqueue(to, std::move(message));
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
+}
+
+void StcRpc::AssignUdpToken(ClientId to) const noexcept
+{
+    Message message(8, STC_ASSIGN_UDP_TOKEN, reinterpret_cast<char*>(&to));
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }

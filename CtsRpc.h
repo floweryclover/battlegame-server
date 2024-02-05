@@ -14,14 +14,17 @@ class StcRpc;
 
 class CtsRpc {
 public:
+    static constexpr int CTS_REQUEST_MATCHMAKING = 1;
+    static constexpr int CTS_MOVE_CHARACTER = 2;
+    static constexpr int CTS_ACK_UDP_TOKEN = 3; // ClientManager가 해당 번호의 Unreliable 메시지를 받을 경우 자동 처리
+
     explicit CtsRpc() = default;
     ~CtsRpc() = default;
     void HandleMessage(const Context& context, const Message& message) const;
 
-    static constexpr int CTS_REQUEST_MATCHMAKING = 1;
-    static constexpr int CTS_ENTER_NICKNAME = 2;
 private:
     void OnRequestMatchMaking(const Context& context) const;
+    void OnMoveCharacter(const Context& context, double x, double y, double z) const;
     void OnEnterNickname(const Context& context, std::string&& nickname) const;
 };
 
