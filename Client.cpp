@@ -21,25 +21,17 @@
 #include <cerrno>
 #endif
 
-Client::Client(ClientId clientId, Socket&& tcpSocket, const struct sockaddr_in* pSockAddrIn, int addrLen) noexcept
+Client::Client(ClientId clientId, Socket&& tcpSocket, SocketAddress&& tcpSocketAddress) noexcept
 : mClientId(clientId),
 mTcpSocket(std::move(tcpSocket)),
 mIsReceivingHeader(true),
 mCurrentReceived(0),
 mTotalSizeToReceive(HEADER_SIZE),
 mLastReceivedHeaderType(0),
-mpUdpSockaddrIn(nullptr),
-mAddrLen(addrLen)
-{
-    mpTcpSockaddrIn = std::make_unique<struct sockaddr_in>();
-    memcpy(mpTcpSockaddrIn.get(), pSockAddrIn, addrLen);
-    std::string endpoint(inet_ntoa(pSockAddrIn->sin_addr));
-    endpoint += ":";
-    endpoint += std::to_string(ntohs(pSockAddrIn->sin_port));
-    mEndpoint = std::move(endpoint);
-}
+mTcpSocketAddress(std::move(tcpSocketAddress))
+{}
 
-Client::Client(Client&& rhs) noexcept : Client(rhs.mClientId, const_cast<Socket&&>(std::move(rhs.mTcpSocket)), rhs.mpTcpSockaddrIn.release(), rhs.mAddrLen) {}
+Client::Client(Client&& rhs) noexcept : Client(rhs.mClientId, const_cast<Socket&&>(std::move(rhs.mTcpSocket)), std::move(rhs.mTcpSocketAddress)) {}
 
 Client::~Client() {}
 
@@ -70,7 +62,7 @@ void Client::Tick()
 
 std::expected<std::optional<std::unique_ptr<Message>>, std::optional<ErrorCode>> Client::ReceiveTcp() {
     int sizeToReceive = mTotalSizeToReceive - mCurrentReceived;
-    int result = recv(GetTcpSocket().AsHandle(), mReceiveBuffer.data() + mCurrentReceived, sizeToReceive, 0);
+    int result = recv(GetTcpSocket().GetRawHandle(), mReceiveBuffer.data() + mCurrentReceived, sizeToReceive, 0);
     if (result == -1)
     {
         int errorCode = errno;

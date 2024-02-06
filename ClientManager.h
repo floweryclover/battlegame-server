@@ -11,6 +11,7 @@
 #include <array>
 #include "Client.h"
 #include "Message.h"
+#include "SocketAddress.h"
 
 enum class MessageReliability
 {
@@ -43,6 +44,7 @@ private:
     std::array<char, MAX_MESSAGE_SIZE> mUdpSendBuffer;
     std::map<ClientId, ClientId> mUdpTcpMap;
     std::map<ClientId, ClientId> mTcpUdpMap;
+    std::map<ClientId, SocketAddress> mUdpSocketAddresses;
 };
 
 

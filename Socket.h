@@ -23,7 +23,7 @@ public:
     ~Socket();
 
     void Shutdown();
-    inline SOCKET AsHandle() const { return this->mSocketHandle; }
+    inline SOCKET GetRawHandle() const { return this->mSocketHandle; }
 private:
     SOCKET mSocketHandle;
 };

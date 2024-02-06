@@ -12,6 +12,7 @@
 #include "Constants.h"
 #include "Context.h"
 #include "Socket.h"
+#include "SocketAddress.h"
 
 #ifdef _WIN32
 #include <WinSock2.h>
@@ -23,29 +24,24 @@
 #include <cerrno>
 #endif
 
-ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenPort) : mCurrentSent(0)
+ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenPort) : mCurrentSent(0), mUdpSendBuffer(), mUdpReceiveBuffer()
 {
     mpListenSocket = std::make_unique<Socket>(socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
     mpUdpSocket = std::make_unique<Socket>(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
 
     int option = 1;
-    int result = setsockopt(mpListenSocket->AsHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    int result = setsockopt(mpListenSocket->GetRawHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     assert(result != -1);
-    result = setsockopt(mpUdpSocket->AsHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
-    assert(result != -1);
-
-    struct sockaddr_in sockAddrIn {};
-    memset(&sockAddrIn, 0, sizeof(struct sockaddr_in));
-    result = inet_pton(AF_INET, listenIpAddress, &sockAddrIn.sin_addr);
-    assert(result == 1);
-    sockAddrIn.sin_family = AF_INET;
-    sockAddrIn.sin_port = htons(listenPort);
-    result = bind(mpListenSocket->AsHandle(), (struct sockaddr*)&sockAddrIn, sizeof(sockAddrIn));
-    assert(result != -1);
-    result = bind(mpUdpSocket->AsHandle(), (struct sockaddr*)&sockAddrIn, sizeof(sockAddrIn));
+    result = setsockopt(mpUdpSocket->GetRawHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     assert(result != -1);
 
-    result = listen(mpListenSocket->AsHandle(), 8);
+    SocketAddress listenSocketAddress(listenIpAddress, listenPort);
+    result = bind(mpListenSocket->GetRawHandle(), reinterpret_cast<const struct sockaddr*>(&listenSocketAddress.GetRawSockAddrIn()), sizeof(struct sockaddr_in));
+    assert(result != -1);
+    result = bind(mpUdpSocket->GetRawHandle(), reinterpret_cast<const struct sockaddr*>(&listenSocketAddress.GetRawSockAddrIn()), sizeof(struct sockaddr_in));
+    assert(result != -1);
+
+    result = listen(mpListenSocket->GetRawHandle(), 8);
     assert(result != -1);
 
 #ifdef _WIN32
@@ -56,9 +52,9 @@ ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenP
     assert(result != -1);
 #elifdef linux
     unsigned long nonblockingFlag = 1;
-    result = ioctl(mpListenSocket->AsHandle(), FIONBIO, &nonblockingFlag);
+    result = ioctl(mpListenSocket->GetRawHandle(), FIONBIO, &nonblockingFlag);
     assert(result != -1);
-    result = ioctl(mpUdpSocket->AsHandle(), FIONBIO, &nonblockingFlag);
+    result = ioctl(mpUdpSocket->GetRawHandle(), FIONBIO, &nonblockingFlag);
     assert(result != -1);
 #endif
 
@@ -68,8 +64,8 @@ void ClientManager::Tick()
 {
     struct sockaddr_in clientAddr {};
     int clientAddrLen = sizeof(clientAddr);
-    Socket clientSocket(accept(mpListenSocket->AsHandle(), reinterpret_cast<struct sockaddr*>(&clientAddr), reinterpret_cast<socklen_t*>(&clientAddrLen)));
-    if (clientSocket.AsHandle() == INVALID_SOCKET)
+    Socket clientSocket(accept(mpListenSocket->GetRawHandle(), reinterpret_cast<struct sockaddr*>(&clientAddr), reinterpret_cast<socklen_t*>(&clientAddrLen)));
+    if (clientSocket.GetRawHandle() == INVALID_SOCKET)
     {
 #ifdef _WIN32
         int errorCode = WSAGetLastError();
@@ -86,11 +82,11 @@ void ClientManager::Tick()
         int result = ioctlsocket(socket, FIONBIO, &nonblockingFlag);
 #elifdef linux
         unsigned long nonblockingFlag = 1;
-        int result = ioctl(clientSocket.AsHandle(), FIONBIO, &nonblockingFlag);
+        int result = ioctl(clientSocket.GetRawHandle(), FIONBIO, &nonblockingFlag);
 #endif
         assert(result != -1);
         ClientId serialized = (ntohl(clientAddr.sin_addr.s_addr) << 16) + (ntohs(clientAddr.sin_port));
-        mClients.emplace(serialized, Client(serialized, std::move(clientSocket), &clientAddr, clientAddrLen));
+        mClients.emplace(serialized, Client(serialized, std::move(clientSocket), SocketAddress(clientAddr)));
         this->InvokeOnPlayerConnected(serialized);
     }
 
@@ -108,7 +104,7 @@ void ClientManager::Tick()
 
             const char* pSendBuffer = (mCurrentSent < HEADER_SIZE ? reinterpret_cast<const char*>(&message) : message.mpBodyBuffer.get() - HEADER_SIZE) + mCurrentSent;
             int lengthToSend = (mCurrentSent < HEADER_SIZE ? HEADER_SIZE : message.mHeaderBodySize + HEADER_SIZE) - mCurrentSent;
-            int result = send(targetClient.GetTcpSocket().AsHandle(), pSendBuffer, lengthToSend, 0);
+            int result = send(targetClient.GetTcpSocket().GetRawHandle(), pSendBuffer, lengthToSend, 0);
             if (result < 0)
             {
 #ifdef _WIN32
@@ -153,7 +149,7 @@ void ClientManager::Tick()
 
     struct sockaddr_in udpReceiveAddr {};
     int udpReceiveAddrSize = sizeof(udpReceiveAddr);
-    int result = recvfrom(mpUdpSocket->AsHandle(), mUdpReceiveBuffer.data(), MAX_MESSAGE_SIZE, 0, reinterpret_cast<struct sockaddr*>(&udpReceiveAddr), reinterpret_cast<socklen_t*>(&udpReceiveAddrSize));
+    int result = recvfrom(mpUdpSocket->GetRawHandle(), mUdpReceiveBuffer.data(), MAX_MESSAGE_SIZE, 0, reinterpret_cast<struct sockaddr*>(&udpReceiveAddr), reinterpret_cast<socklen_t*>(&udpReceiveAddrSize));
     if (result < 0)
     {
         int errorCode = errno;
@@ -190,7 +186,7 @@ void ClientManager::Tick()
                 {
                     mUdpTcpMap.emplace(serialized, token);
                     mTcpUdpMap.emplace(token, serialized);
-                    std::cout << "클라이언트 " << token << ": UDP ID " << serialized << " 연결" << std::endl;
+                    mUdpSocketAddresses.emplace(serialized, SocketAddress(udpReceiveAddr));
                 }
             }
         }
@@ -210,19 +206,21 @@ void ClientManager::RequestSendMessage(MessageReliability reliability, ClientId 
     {
         return;
     }
-
     if (reliability == MessageReliability::RELIABLE)
     {
         mSendQueue.emplace(targetClientId, std::move(message));
     }
     else
     {
+        if (!mTcpUdpMap.contains(targetClientId))
+        {
+            return;
+        }
+        const auto& udpSocketAddress = mUdpSocketAddresses.at(mTcpUdpMap.at(targetClientId));
         memcpy(mUdpSendBuffer.data(), &message.mHeaderBodySize, 4);
         memcpy(mUdpSendBuffer.data()+4, &message.mHeaderMessageType, 4);
         memcpy(mUdpSendBuffer.data()+8, message.mpBodyBuffer.get(), message.mHeaderBodySize);
-        int result = sendto(mpUdpSocket->AsHandle(), mUdpSendBuffer.data(), 4+4+message.mHeaderBodySize, 0, reinterpret_cast<const struct sockaddr*>(mClients.at(
-                targetClientId).GetTcpSockAddrIn()), static_cast<socklen_t>(mClients.at(
-                targetClientId).GetTcpSockAddrLen()));
+        int result = sendto(mpUdpSocket->GetRawHandle(), mUdpSendBuffer.data(), 4 + 4 + message.mHeaderBodySize, 0, reinterpret_cast<const struct sockaddr*>(&udpSocketAddress.GetRawSockAddrIn()), sizeof(struct sockaddr_in));
         if (result < 0)
         {
             int errorCode = errno;
@@ -252,7 +250,7 @@ bool ClientManager::KickPlayer(ClientId clientId)
 
 void ClientManager::InvokeOnPlayerDisconnected(ClientId clientId)
 {
-    std::cout << "[접속 해제] 클라이언트 " << clientId << " (" << mClients.at(clientId).GetEndpointString() << ")" << std::endl;
+    std::cout << "[접속 해제] 클라이언트 " << clientId << " (" << mClients.at(clientId).GetTcpSocketAddress().ToString() << ")" << std::endl;
 
     if (mTcpUdpMap.contains(clientId))
     {
@@ -269,7 +267,7 @@ void ClientManager::InvokeOnPlayerDisconnected(ClientId clientId)
 void ClientManager::InvokeOnPlayerConnected(ClientId clientId)
 {
     // mClient에 유저를 넣는 것은 accept()하는 부분에서 진행
-    std::cout << "[접속] 클라이언트 " << clientId <<  " (" << mClients.at(clientId).GetEndpointString() << ")" << std::endl;
+    std::cout << "[접속] 클라이언트 " << clientId <<  " (" << mClients.at(clientId).GetTcpSocketAddress().ToString() << ")" << std::endl;
 
     BattleGameServer::GetInstance()
     .GetGameData()

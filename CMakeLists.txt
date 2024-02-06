@@ -32,4 +32,6 @@ add_executable(battlegame_server main.cpp
         BattleGameServer.cpp
         BattleGameServer.h
         Enums.h
+        SocketAddress.cpp
+        SocketAddress.h
 )
