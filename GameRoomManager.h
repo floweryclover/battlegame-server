@@ -7,6 +7,7 @@
 
 #include <map>
 #include <queue>
+#include <optional>
 #include "GameRoom.h"
 
 using SerializedEndpoint = unsigned long long;
@@ -21,11 +22,14 @@ public:
     bool JoinPlayer(ClientId clientId, GameRoomId roomId);
     bool StartMatchMaking(ClientId clientId);
     void StopMatchMaking(ClientId clientId);
-
+    std::optional<GameRoomId> GetPlayerJoinedRoomId(ClientId clientId) const noexcept;
     void OnPlayerConnected(ClientId clientId);
     void OnPlayerDisconnected(ClientId clientId);
 
     void Tick();
+
+    GameRoom* GetGameRoom(GameRoomId roomId) noexcept;
+    const GameRoom* GetConstGameRoom(GameRoomId roomId) const noexcept;
 
 private:
     GameRoomId mNewRoomId;
@@ -34,6 +38,8 @@ private:
     std::queue<ClientId> mMatchMakingPlayers;
 
     static bool CheckIfPlayerNotValid(ClientId clientId);
+    bool IsValidGameRoom(GameRoomId roomId) const noexcept;
+    bool IsPlayerInGameRoom(ClientId clientId) const noexcept;
 };
 
 

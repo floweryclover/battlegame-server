@@ -10,7 +10,7 @@
 #include "GameRoomManager.h"
 #include <iostream>
 
-void CtsRpc::HandleMessage(const Context& context, const Message& message) const
+void CtsRpc::HandleMessage(const Context& context, const Message& message) const noexcept
 {
     switch (message.mHeaderMessageType)
     {
@@ -27,10 +27,13 @@ void CtsRpc::HandleMessage(const Context& context, const Message& message) const
         case CtsRpc::CTS_ACK_UDP_TOKEN:
             // 헤더 주석 참고
             break;
+        case CtsRpc::CTS_NOTIFY_BATTLEGAME_PREPARED:
+            OnNotifyBattleGamePrepared(context);
+            break;
     }
 }
 
-void CtsRpc::OnRequestMatchMaking(const Context& context) const
+void CtsRpc::OnRequestMatchMaking(const Context& context) const noexcept
 {
     BattleGameServer::GetInstance()
     .GetGameData()
@@ -38,12 +41,22 @@ void CtsRpc::OnRequestMatchMaking(const Context& context) const
     .StartMatchMaking(context.GetClientId());
 }
 
-void CtsRpc::OnMoveCharacter(const Context &context, double x, double y, double z) const
+void CtsRpc::OnMoveCharacter(const Context &context, double x, double y, double z) const noexcept
 {
-    std::cout << "클라이언트 " << context.GetClientId() << " 이동: " << x << ", " << y << ", " << z << std::endl;
+
 }
 
-void CtsRpc::OnEnterNickname(const Context &context, std::string &&nickname) const
+void CtsRpc::OnEnterNickname(const Context &context, std::string &&nickname) const noexcept
 {
     BattleGameServer::GetInstance().GetGameData().SetPlayerNickname(context.GetClientId(), nickname);
+}
+
+void CtsRpc::OnNotifyBattleGamePrepared(const Context &context) const noexcept
+{
+    auto gameRoomOption = BattleGameServer::GetInstance().GetGameData().GetGameRoomManager().GetPlayerJoinedRoomId(context.GetClientId());
+    if (!gameRoomOption.has_value())
+    {
+        return;
+    }
+    BattleGameServer::GetInstance().GetGameData().GetGameRoomManager().GetGameRoom(gameRoomOption.value())->InvokeOnPlayerPrepared(context.GetClientId());
 }

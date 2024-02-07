@@ -18,7 +18,7 @@ GameRoom::GameRoom(GameRoom &&rhs) noexcept : GameRoom(rhs.mRoomId)
 
 }
 
-void GameRoom::OnPlayerJoined(ClientId clientId) noexcept
+void GameRoom::InvokeOnPlayerJoined(ClientId clientId) noexcept
 {
     mJoinedPlayers.insert(clientId);
     if (mRoomId == ROOM_MAINMENU)
@@ -37,7 +37,7 @@ void GameRoom::OnPlayerJoined(ClientId clientId) noexcept
     .JoinedGameRoom(clientId);
 }
 
-void GameRoom::OnPlayerLeft(ClientId clientId) noexcept
+void GameRoom::InvokeOnPlayerLeft(ClientId clientId) noexcept
 {
     mJoinedPlayers.erase(clientId);
     if (mRoomId == ROOM_MAINMENU)
@@ -54,4 +54,15 @@ void GameRoom::OnPlayerLeft(ClientId clientId) noexcept
     BattleGameServer::GetInstance()
     .GetConstStcRpc()
     .DisconnectedFromGame(clientId);
+}
+
+void GameRoom::InvokeOnPlayerPrepared(ClientId clientId) noexcept
+{
+    BattleGameServer::GetInstance()
+    .GetConstStcRpc()
+    .SpawnEntity(clientId);
+
+    BattleGameServer::GetInstance()
+    .GetConstStcRpc()
+    .PossessEntity(clientId);
 }

@@ -64,8 +64,8 @@ bool GameRoomManager::JoinPlayer(ClientId clientId, GameRoomId roomId)
         return false;
     }
 
-    mGameRooms.at(mRoomOfPlayers[clientId]).OnPlayerLeft(clientId);
-    mGameRooms.at(roomId).OnPlayerJoined(clientId);
+    mGameRooms.at(mRoomOfPlayers[clientId]).InvokeOnPlayerLeft(clientId);
+    mGameRooms.at(roomId).InvokeOnPlayerJoined(clientId);
     mRoomOfPlayers[clientId] = roomId;
     return true;
 }
@@ -100,6 +100,46 @@ void GameRoomManager::OnPlayerConnected(ClientId clientId)
 
 void GameRoomManager::OnPlayerDisconnected(ClientId clientId)
 {
-    mGameRooms.at(mRoomOfPlayers[clientId]).OnPlayerLeft(clientId);
+    mGameRooms.at(mRoomOfPlayers[clientId]).InvokeOnPlayerLeft(clientId);
     mRoomOfPlayers.erase(clientId);
+}
+
+std::optional<GameRoomId> GameRoomManager::GetPlayerJoinedRoomId(ClientId clientId) const noexcept
+{
+    if (!mRoomOfPlayers.contains(clientId)
+    || mRoomOfPlayers.at(clientId) == GameRoom::ROOM_MATCHMAKING
+    || mRoomOfPlayers.at(clientId) == GameRoom::ROOM_MAINMENU)
+    {
+        return std::nullopt;
+    }
+
+    return mRoomOfPlayers.at(clientId);
+}
+
+GameRoom* GameRoomManager::GetGameRoom(GameRoomId roomId) noexcept
+{
+    return const_cast<GameRoom*>(this->GetConstGameRoom(roomId));
+}
+
+const GameRoom* GameRoomManager::GetConstGameRoom(GameRoomId roomId) const noexcept
+{
+    if (!IsValidGameRoom(roomId))
+    {
+        return nullptr;
+    }
+    return &mGameRooms.at(roomId);
+}
+
+bool GameRoomManager::IsValidGameRoom(GameRoomId roomId) const noexcept
+{
+    if (!mGameRooms.contains(roomId)
+    || roomId == GameRoom::ROOM_MAINMENU
+    || roomId == GameRoom::ROOM_MATCHMAKING)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 }

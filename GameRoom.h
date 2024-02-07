@@ -11,7 +11,8 @@ using SerializedEndpoint = unsigned long long;
 using ClientId = SerializedEndpoint;
 using GameRoomId = unsigned int;
 
-class GameRoom {
+class GameRoom
+{
 public:
     static constexpr GameRoomId ROOM_MAINMENU = 0;
     static constexpr GameRoomId ROOM_MATCHMAKING = 1;
@@ -28,8 +29,9 @@ public:
     inline unsigned short GetMaxPlayerCount() const { return mMaxPlayerCount; }
     inline unsigned short GetCurrentPlayerCount() const { return mJoinedPlayers.size(); }
 
-    void OnPlayerJoined(ClientId clientId) noexcept;
-    void OnPlayerLeft(ClientId clientId) noexcept;
+    void InvokeOnPlayerJoined(ClientId clientId) noexcept;
+    void InvokeOnPlayerLeft(ClientId clientId) noexcept;
+    void InvokeOnPlayerPrepared(ClientId clientId) noexcept;
 
 private:
     GameRoomId mRoomId;
