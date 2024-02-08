@@ -43,7 +43,21 @@ void CtsRpc::OnRequestMatchMaking(const Context& context) const noexcept
 
 void CtsRpc::OnMoveCharacter(const Context &context, double x, double y, double z) const noexcept
 {
+    auto roomIdOption = BattleGameServer::GetInstance()
+    .GetGameData()
+    .GetGameRoomManager()
+    .GetPlayerJoinedRoomId(context.GetClientId());
+    if (!roomIdOption.has_value())
+    {
+        std::cerr << "[에러] 클라이언트 " << context.GetClientId() << " 가 속한 방 ID를 검색했으나 존재하지 않았습니다." << std::endl;
+        return;
+    }
 
+    BattleGameServer::GetInstance()
+    .GetGameData()
+    .GetGameRoomManager()
+    .GetGameRoom(roomIdOption.value())
+    ->InvokeOnPlayerMove(context.GetClientId(), Vector {x, y, z}, 0);
 }
 
 void CtsRpc::OnEnterNickname(const Context &context, std::string &&nickname) const noexcept

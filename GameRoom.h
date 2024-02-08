@@ -6,10 +6,13 @@
 #define BATTLEGAME_SERVER_GAMEROOM_H
 
 #include <set>
+#include <map>
+#include "UnrealTypes.h"
 
 using SerializedEndpoint = unsigned long long;
 using ClientId = SerializedEndpoint;
 using GameRoomId = unsigned int;
+using EntityId = int;
 
 class GameRoom
 {
@@ -32,11 +35,19 @@ public:
     void InvokeOnPlayerJoined(ClientId clientId) noexcept;
     void InvokeOnPlayerLeft(ClientId clientId) noexcept;
     void InvokeOnPlayerPrepared(ClientId clientId) noexcept;
+    void InvokeOnPlayerMove(ClientId clientId, Vector&& location, double direction) noexcept;
+    void InvokeOnEntityMove(EntityId entityId, Vector&& location, double direction) noexcept;
 
 private:
     GameRoomId mRoomId;
     unsigned short mMaxPlayerCount;
     std::set<ClientId> mJoinedPlayers;
+    std::set<ClientId> mOnlinePlayers; // 접속되고 Prepared된 클라이언트들
+    std::set<EntityId> mEntities;
+    std::map<EntityId, Vector> mEntityLocations;
+    std::map<EntityId, double> mEntityDirections;
+    std::map<ClientId, EntityId> mPlayerControllingPawnIds;
+    int mNewEntityId;
 };
 
 

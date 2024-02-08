@@ -8,7 +8,7 @@
 #include "StcRpc.h"
 #include <iostream>
 
-GameRoom::GameRoom(unsigned int roomId) noexcept : mRoomId(roomId)
+GameRoom::GameRoom(unsigned int roomId) noexcept : mRoomId(roomId), mNewEntityId(0)
 {
     this->mMaxPlayerCount = 4;
 }
@@ -31,6 +31,19 @@ void GameRoom::InvokeOnPlayerJoined(ClientId clientId) noexcept
         return;
     }
 
+    mEntities.emplace(mNewEntityId);
+    mPlayerControllingPawnIds.emplace(clientId, mNewEntityId);
+    mEntityLocations.emplace(mNewEntityId, Vector {0.0, 0.0, 400.0});
+    mEntityDirections.emplace(mNewEntityId, 0.0);
+    // 방 내 모든 플레이어에게 엔티티 생성 멀티캐스트
+    for (auto cIter = mOnlinePlayers.cbegin(); cIter != mOnlinePlayers.cend(); cIter++)
+    {
+        BattleGameServer::GetInstance()
+        .GetConstStcRpc()
+        .SpawnEntity(*cIter, mNewEntityId, mEntityLocations.at(mNewEntityId), mEntityDirections.at(mNewEntityId));
+    }
+    mNewEntityId++;
+
     std::cout << "플레이어 " << clientId << " 방 " << mRoomId << " 참여" << std::endl;
     BattleGameServer::GetInstance()
     .GetConstStcRpc()
@@ -50,6 +63,20 @@ void GameRoom::InvokeOnPlayerLeft(ClientId clientId) noexcept
         return;
     }
 
+    // 방 내 모든 플레이어에게 해당 플레이어 삭제를 멀티캐스트
+    mOnlinePlayers.erase(clientId);
+    EntityId playerPawnId = mPlayerControllingPawnIds.at(clientId);
+    for (auto cIter = mOnlinePlayers.cbegin(); cIter != mOnlinePlayers.cend(); cIter++)
+    {
+        BattleGameServer::GetInstance()
+        .GetConstStcRpc()
+        .DespawnEntity(*cIter, playerPawnId);
+    }
+    mEntities.erase(playerPawnId);
+    mEntityLocations.erase(playerPawnId);
+    mEntityDirections.erase(playerPawnId);
+    mPlayerControllingPawnIds.erase(clientId);
+
     std::cout << "플레이어 " << clientId << " 방 " << mRoomId << " 퇴장" << std::endl;
     BattleGameServer::GetInstance()
     .GetConstStcRpc()
@@ -58,11 +85,45 @@ void GameRoom::InvokeOnPlayerLeft(ClientId clientId) noexcept
 
 void GameRoom::InvokeOnPlayerPrepared(ClientId clientId) noexcept
 {
-    BattleGameServer::GetInstance()
+    // 이 클라이언트에게 모든 정보 보내기
+    for (auto cIter = mEntities.cbegin(); cIter != mEntities.cend(); cIter++)
+    {
+        BattleGameServer::GetInstance()
+        .GetConstStcRpc()
+        .SpawnEntity(clientId, *cIter, mEntityLocations.at(*cIter), mEntityDirections.at(*cIter));
+    }
+    mOnlinePlayers.emplace(clientId);
+    BattleGameServer::GetConstInstance()
     .GetConstStcRpc()
-    .SpawnEntity(clientId);
+    .PossessEntity(clientId, mPlayerControllingPawnIds.at(clientId));
+}
 
-    BattleGameServer::GetInstance()
-    .GetConstStcRpc()
-    .PossessEntity(clientId);
+void GameRoom::InvokeOnPlayerMove(ClientId clientId, Vector &&location, double direction) noexcept
+{
+    if (!mOnlinePlayers.contains(clientId))
+    {
+        std::cerr << mRoomId << "번 게임에 " << clientId << "클라이언트 이동이 요청되었으나 해당 클라이언트는 없습니다." << std::endl;
+        return;
+    }
+
+    InvokeOnEntityMove(mPlayerControllingPawnIds.at(clientId), std::move(location), direction);
+}
+
+void GameRoom::InvokeOnEntityMove(EntityId entityId, Vector &&location, double direction) noexcept
+{
+    if (!mEntities.contains(entityId))
+    {
+        std::cerr << mRoomId << "번 게임에 ID " << entityId << " 엔티티 이동이 요청되었으나 해당 엔티티는 없습니다." << std::endl;
+        return;
+    }
+
+    mEntityLocations.at(entityId) = location;
+    mEntityDirections.at(entityId) = direction;
+
+    for (auto cIter = mOnlinePlayers.cbegin(); cIter != mOnlinePlayers.cend(); cIter++)
+    {
+        BattleGameServer::GetConstInstance()
+        .GetConstStcRpc()
+        .MoveEntity(*cIter, entityId, location, direction);
+    }
 }

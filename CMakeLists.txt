@@ -34,4 +34,6 @@ add_executable(battlegame_server main.cpp
         Enums.h
         SocketAddress.cpp
         SocketAddress.h
+        UnrealTypes.cpp
+        UnrealTypes.h
 )
