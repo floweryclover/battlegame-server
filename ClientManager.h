@@ -42,9 +42,6 @@ private:
     std::unique_ptr<Socket> mpUdpSocket;
     std::array<char, MAX_MESSAGE_SIZE> mUdpReceiveBuffer;
     std::array<char, MAX_MESSAGE_SIZE> mUdpSendBuffer;
-    std::map<ClientId, ClientId> mUdpTcpMap;
-    std::map<ClientId, ClientId> mTcpUdpMap;
-    std::map<ClientId, SocketAddress> mUdpSocketAddresses;
 };
 
 

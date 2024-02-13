@@ -6,6 +6,7 @@
 #include "GameData.h"
 #include "BattleGameServer.h"
 #include "StcRpc.h"
+#include "ClientManager.h"
 #include <iostream>
 
 GameRoom::GameRoom(unsigned int roomId) noexcept : mRoomId(roomId), mNewEntityId(0)
@@ -30,7 +31,7 @@ void GameRoom::InvokeOnPlayerJoined(ClientId clientId) noexcept
         std::cout << "플레이어 " << clientId << " 매치메이킹 시작" << std::endl;
         return;
     }
-
+    // 캐릭터 엔티티 생성
     mEntities.emplace(mNewEntityId);
     mPlayerControllingPawnIds.emplace(clientId, mNewEntityId);
     mEntityLocations.emplace(mNewEntityId, Vector {0.0, 0.0, 400.0});
@@ -39,11 +40,10 @@ void GameRoom::InvokeOnPlayerJoined(ClientId clientId) noexcept
     for (auto cIter = mOnlinePlayers.cbegin(); cIter != mOnlinePlayers.cend(); cIter++)
     {
         BattleGameServer::GetInstance()
-        .GetConstStcRpc()
-        .SpawnEntity(*cIter, mNewEntityId, mEntityLocations.at(mNewEntityId), mEntityDirections.at(mNewEntityId));
+                .GetConstStcRpc()
+                .SpawnEntity(*cIter, mNewEntityId, mEntityLocations.at(mNewEntityId), mEntityDirections.at(mNewEntityId));
     }
     mNewEntityId++;
-
     std::cout << "플레이어 " << clientId << " 방 " << mRoomId << " 참여" << std::endl;
     BattleGameServer::GetInstance()
     .GetConstStcRpc()
@@ -62,20 +62,22 @@ void GameRoom::InvokeOnPlayerLeft(ClientId clientId) noexcept
         std::cout << "플레이어 " << clientId << " 매치메이킹 종료" << std::endl;
         return;
     }
-
     // 방 내 모든 플레이어에게 해당 플레이어 삭제를 멀티캐스트
     mOnlinePlayers.erase(clientId);
-    EntityId playerPawnId = mPlayerControllingPawnIds.at(clientId);
-    for (auto cIter = mOnlinePlayers.cbegin(); cIter != mOnlinePlayers.cend(); cIter++)
+    if (mPlayerControllingPawnIds.contains(clientId))
     {
-        BattleGameServer::GetInstance()
-        .GetConstStcRpc()
-        .DespawnEntity(*cIter, playerPawnId);
+        EntityId playerPawnId = mPlayerControllingPawnIds.at(clientId);
+        for (auto cIter = mOnlinePlayers.cbegin(); cIter != mOnlinePlayers.cend(); cIter++)
+        {
+            BattleGameServer::GetInstance()
+                    .GetConstStcRpc()
+                    .DespawnEntity(*cIter, playerPawnId);
+        }
+        mEntities.erase(playerPawnId);
+        mEntityLocations.erase(playerPawnId);
+        mEntityDirections.erase(playerPawnId);
+        mPlayerControllingPawnIds.erase(clientId);
     }
-    mEntities.erase(playerPawnId);
-    mEntityLocations.erase(playerPawnId);
-    mEntityDirections.erase(playerPawnId);
-    mPlayerControllingPawnIds.erase(clientId);
 
     std::cout << "플레이어 " << clientId << " 방 " << mRoomId << " 퇴장" << std::endl;
     BattleGameServer::GetInstance()
@@ -85,6 +87,9 @@ void GameRoom::InvokeOnPlayerLeft(ClientId clientId) noexcept
 
 void GameRoom::InvokeOnPlayerPrepared(ClientId clientId) noexcept
 {
+    // 온라인 플레이어에 등록
+    mOnlinePlayers.emplace(clientId);
+
     // 이 클라이언트에게 모든 정보 보내기
     for (auto cIter = mEntities.cbegin(); cIter != mEntities.cend(); cIter++)
     {
@@ -92,13 +97,14 @@ void GameRoom::InvokeOnPlayerPrepared(ClientId clientId) noexcept
         .GetConstStcRpc()
         .SpawnEntity(clientId, *cIter, mEntityLocations.at(*cIter), mEntityDirections.at(*cIter));
     }
-    mOnlinePlayers.emplace(clientId);
+
+    // 소유 폰 지정
     BattleGameServer::GetConstInstance()
     .GetConstStcRpc()
     .PossessEntity(clientId, mPlayerControllingPawnIds.at(clientId));
 }
 
-void GameRoom::InvokeOnPlayerMove(ClientId clientId, Vector &&location, double direction) noexcept
+void GameRoom::InvokeOnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept
 {
     if (!mOnlinePlayers.contains(clientId))
     {
@@ -106,10 +112,10 @@ void GameRoom::InvokeOnPlayerMove(ClientId clientId, Vector &&location, double d
         return;
     }
 
-    InvokeOnEntityMove(mPlayerControllingPawnIds.at(clientId), std::move(location), direction);
+    InvokeOnEntityMove(mPlayerControllingPawnIds.at(clientId), location, direction);
 }
 
-void GameRoom::InvokeOnEntityMove(EntityId entityId, Vector &&location, double direction) noexcept
+void GameRoom::InvokeOnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept
 {
     if (!mEntities.contains(entityId))
     {
@@ -126,4 +132,9 @@ void GameRoom::InvokeOnEntityMove(EntityId entityId, Vector &&location, double d
         .GetConstStcRpc()
         .MoveEntity(*cIter, entityId, location, direction);
     }
+}
+
+void GameRoom::Tick() noexcept
+{
+
 }

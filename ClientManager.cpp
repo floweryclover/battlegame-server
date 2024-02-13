@@ -166,36 +166,16 @@ void ClientManager::Tick()
         char* body = new char[message.mHeaderBodySize];
         memcpy(body, mUdpReceiveBuffer.data()+8, message.mHeaderBodySize);
         message.mpBodyBuffer = std::unique_ptr<char>(body);
-        if (!mUdpTcpMap.contains(serialized))
+        if (!mClients.contains(serialized))
         {
-            // 첫 UDP 메시지의 경우 무조건 토큰을 담고 있음
-            // 그렇지 않은 경우 유효하지 않은 UDP 연결이라고 간주
-            if (message.mHeaderMessageType != CtsRpc::CTS_ACK_UDP_TOKEN)
-            {
-                std::cerr << "클라이언트 UDP:" << serialized << " 가 유효하지 않은 UDP 인증 토큰을 보냈거나 인증되지 않은 연결입니다." << std::endl;
-            }
-            else
-            {
-                ClientId token;
-                memcpy(&token, message.mpBodyBuffer.get(), 8);
-                if (mTcpUdpMap.contains(token))
-                {
-                    std::cerr << "클라이언트 UDP:" << serialized << " 가 UDP 인증 토큰을 보냈으나 해당 TCP 소켓과 일치하는 UDP 소켓이 이미 등록되어 있습니다." << std::endl;
-                }
-                else
-                {
-                    mUdpTcpMap.emplace(serialized, token);
-                    mTcpUdpMap.emplace(token, serialized);
-                    mUdpSocketAddresses.emplace(serialized, SocketAddress(udpReceiveAddr));
-                }
-            }
+            std::cerr << "UDP 클라이언트 " << serialized << ": 인증되지 않은 연결입니다." << std::endl;
         }
         else
         {
             // TCP 소켓 ID로 변환해서 호출
             BattleGameServer::GetConstInstance()
             .GetConstCtsRpc()
-            .HandleMessage(Context(mUdpTcpMap.at(serialized), SendReliability::UNRELIABLE), message);
+            .HandleMessage(Context(serialized, SendReliability::UNRELIABLE), message);
         }
     }
 }
@@ -212,11 +192,7 @@ void ClientManager::RequestSendMessage(MessageReliability reliability, ClientId 
     }
     else
     {
-        if (!mTcpUdpMap.contains(targetClientId))
-        {
-            return;
-        }
-        const auto& udpSocketAddress = mUdpSocketAddresses.at(mTcpUdpMap.at(targetClientId));
+        const auto& udpSocketAddress = mClients.at(targetClientId).GetTcpSocketAddress();
         memcpy(mUdpSendBuffer.data(), &message.mHeaderBodySize, 4);
         memcpy(mUdpSendBuffer.data()+4, &message.mHeaderMessageType, 4);
         memcpy(mUdpSendBuffer.data()+8, message.mpBodyBuffer.get(), message.mHeaderBodySize);
@@ -252,12 +228,6 @@ void ClientManager::InvokeOnPlayerDisconnected(ClientId clientId)
 {
     std::cout << "[접속 해제] 클라이언트 " << clientId << " (" << mClients.at(clientId).GetTcpSocketAddress().ToString() << ")" << std::endl;
 
-    if (mTcpUdpMap.contains(clientId))
-    {
-        mUdpTcpMap.erase(mTcpUdpMap.at(clientId));
-        mTcpUdpMap.erase(clientId);
-    }
-
     BattleGameServer::GetInstance()
     .GetGameData()
     .OnPlayerDisconnected(clientId);
@@ -272,8 +242,4 @@ void ClientManager::InvokeOnPlayerConnected(ClientId clientId)
     BattleGameServer::GetInstance()
     .GetGameData()
     .OnPlayerConnected(clientId);
-
-    BattleGameServer::GetConstInstance()
-    .GetConstStcRpc()
-    .AssignUdpToken(clientId);
 }

@@ -32,11 +32,12 @@ public:
     inline unsigned short GetMaxPlayerCount() const { return mMaxPlayerCount; }
     inline unsigned short GetCurrentPlayerCount() const { return mJoinedPlayers.size(); }
 
+    void Tick() noexcept;
     void InvokeOnPlayerJoined(ClientId clientId) noexcept;
     void InvokeOnPlayerLeft(ClientId clientId) noexcept;
     void InvokeOnPlayerPrepared(ClientId clientId) noexcept;
-    void InvokeOnPlayerMove(ClientId clientId, Vector&& location, double direction) noexcept;
-    void InvokeOnEntityMove(EntityId entityId, Vector&& location, double direction) noexcept;
+    void InvokeOnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept;
+    void InvokeOnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept;
 
 private:
     GameRoomId mRoomId;

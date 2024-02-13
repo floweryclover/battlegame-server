@@ -16,6 +16,7 @@ GameRoomManager::GameRoomManager() noexcept : mNewRoomId(GameRoom::ROOM_MATCHMAK
 
 void GameRoomManager::Tick()
 {
+    // 매치메이킹
     auto matchMakePlayer = [this](ClientId clientId)
     {
         if (CheckIfPlayerNotValid(clientId)
@@ -42,12 +43,17 @@ void GameRoomManager::Tick()
         JoinPlayer(clientId, mNewRoomId);
         mNewRoomId++;
     };
-
     if (!mMatchMakingPlayers.empty())
     {
         auto top = mMatchMakingPlayers.front();
         mMatchMakingPlayers.pop();
         matchMakePlayer(top);
+    }
+
+    // 모든 게임방 틱
+    for (auto iter = mGameRooms.begin(); iter != mGameRooms.end(); iter++)
+    {
+        iter->second.Tick();
     }
 }
 

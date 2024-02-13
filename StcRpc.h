@@ -16,7 +16,6 @@ class StcRpc {
 public:
     static constexpr int STC_JOINED_GAME_ROOM = 1;
     static constexpr int STC_DISCONNECTED_FROM_GAME = 2;
-    static constexpr int STC_ASSIGN_UDP_TOKEN = 3;
     static constexpr int STC_SPAWN_ENTITY = 4;
     static constexpr int STC_DESPAWN_ENTITY = 5;
     static constexpr int STC_POSSESS_ENTITY = 6;
@@ -31,7 +30,6 @@ public:
 
     void JoinedGameRoom(ClientId to) const noexcept;
     void DisconnectedFromGame(ClientId to) const noexcept;
-    void AssignUdpToken(ClientId to) const noexcept;
     void SpawnEntity(ClientId to, int entityId, const Vector& location, double direction) const noexcept;
     void DespawnEntity(ClientId to, int entityId) const noexcept;
     void PossessEntity(ClientId to, int entityId) const noexcept;

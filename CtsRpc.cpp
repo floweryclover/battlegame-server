@@ -18,14 +18,12 @@ void CtsRpc::HandleMessage(const Context& context, const Message& message) const
             OnRequestMatchMaking(context);
             break;
         case CtsRpc::CTS_MOVE_CHARACTER:
-            double x,y,z;
+            double x, y, z, direction;
             memcpy(&x, message.mpBodyBuffer.get(), 8);
             memcpy(&y, message.mpBodyBuffer.get()+8, 8);
             memcpy(&z, message.mpBodyBuffer.get()+16, 8);
-            OnMoveCharacter(context, x, y, z);
-            break;
-        case CtsRpc::CTS_ACK_UDP_TOKEN:
-            // 헤더 주석 참고
+            memcpy(&direction, message.mpBodyBuffer.get()+24, 8);
+            OnMoveCharacter(context, Vector {x, y, z}, direction);
             break;
         case CtsRpc::CTS_NOTIFY_BATTLEGAME_PREPARED:
             OnNotifyBattleGamePrepared(context);
@@ -41,7 +39,7 @@ void CtsRpc::OnRequestMatchMaking(const Context& context) const noexcept
     .StartMatchMaking(context.GetClientId());
 }
 
-void CtsRpc::OnMoveCharacter(const Context &context, double x, double y, double z) const noexcept
+void CtsRpc::OnMoveCharacter(const Context &context, const Vector& position, double direction) const noexcept
 {
     auto roomIdOption = BattleGameServer::GetInstance()
     .GetGameData()
@@ -57,7 +55,7 @@ void CtsRpc::OnMoveCharacter(const Context &context, double x, double y, double 
     .GetGameData()
     .GetGameRoomManager()
     .GetGameRoom(roomIdOption.value())
-    ->InvokeOnPlayerMove(context.GetClientId(), Vector {x, y, z}, 0);
+    ->InvokeOnPlayerMove(context.GetClientId(), position, direction);
 }
 
 void CtsRpc::OnEnterNickname(const Context &context, std::string &&nickname) const noexcept
@@ -72,5 +70,6 @@ void CtsRpc::OnNotifyBattleGamePrepared(const Context &context) const noexcept
     {
         return;
     }
+
     BattleGameServer::GetInstance().GetGameData().GetGameRoomManager().GetGameRoom(gameRoomOption.value())->InvokeOnPlayerPrepared(context.GetClientId());
 }

@@ -20,12 +20,6 @@ void StcRpc::DisconnectedFromGame(ClientId to) const noexcept
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }
 
-void StcRpc::AssignUdpToken(ClientId to) const noexcept
-{
-    Message message(8, STC_ASSIGN_UDP_TOKEN, reinterpret_cast<char*>(&to));
-    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
-}
-
 void StcRpc::SpawnEntity(ClientId to, int entityId, const Vector& location, double direction) const noexcept
 {
     char serialized[36];
