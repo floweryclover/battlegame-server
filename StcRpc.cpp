@@ -8,9 +8,9 @@
 #include "ClientManager.h"
 #include <iostream>
 
-void StcRpc::JoinedGameRoom(ClientId to) const noexcept
+void StcRpc::OpenLevel(ClientId to, int level) const noexcept
 {
-    Message message(0, STC_JOINED_GAME_ROOM, nullptr);
+    Message message(4, STC_OPEN_LEVEL, reinterpret_cast<char*>(&level));
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }
 

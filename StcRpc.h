@@ -12,10 +12,15 @@ class Message;
 using SerializedEndpoint = unsigned long long;
 using ClientId = SerializedEndpoint;
 
+namespace Level
+{
+    static constexpr int MAINMENU = 0;
+}
+
 class StcRpc {
 public:
-    static constexpr int STC_JOINED_GAME_ROOM = 1;
-    static constexpr int STC_DISCONNECTED_FROM_GAME = 2;
+    static constexpr int STC_OPEN_LEVEL = 1;
+    static constexpr int STC_DISCONNECTED_FROM_GAME = 2; // 이유 등 통지만 하고 레벨 열지는 않음
     static constexpr int STC_SPAWN_ENTITY = 4;
     static constexpr int STC_DESPAWN_ENTITY = 5;
     static constexpr int STC_POSSESS_ENTITY = 6;
@@ -28,7 +33,7 @@ public:
     StcRpc() = default;
     ~StcRpc() = default;
 
-    void JoinedGameRoom(ClientId to) const noexcept;
+    void OpenLevel(ClientId to, int level) const noexcept;
     void DisconnectedFromGame(ClientId to) const noexcept;
     void SpawnEntity(ClientId to, int entityId, const Vector& location, double direction) const noexcept;
     void DespawnEntity(ClientId to, int entityId) const noexcept;
