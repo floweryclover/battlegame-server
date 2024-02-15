@@ -43,6 +43,12 @@ void OneVsOneGameRoom::OnPlayerPrepared(ClientId clientId) noexcept
     {mBluePlayer = clientId;}
     else
     {mRedPlayer = clientId;}
+
+    auto remainTime = mTimePoint+mTimeSet-std::chrono::steady_clock::now();
+    auto a = std::chrono::duration_cast<std::chrono::seconds>(remainTime).count();
+    BattleGameServer::GetConstInstance()
+    .GetConstStcRpc()
+    .SetTimer(clientId, a);
 }
 
 void OneVsOneGameRoom::Tick() noexcept
@@ -72,7 +78,7 @@ void OneVsOneGameRoom::Tick() noexcept
                     .SpawnEntity(
                             to,
                             whose,
-                            whose == ENTITY_ID_PLAYER_BLUE ? Vector { 100, 0, 200 } : Vector { -100, 0, 200 },
+                            whose == ENTITY_ID_PLAYER_BLUE ? Vector { 100, 0, 2000 } : Vector { -100, 0, 2000 },
                             whose == ENTITY_ID_PLAYER_BLUE ? 180.0 : 0.0);
                 };
 

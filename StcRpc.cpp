@@ -55,3 +55,9 @@ void StcRpc::MoveEntity(ClientId to, int entityId, const Vector &location, doubl
     Message message(36, STC_MOVE_ENTITY, serialized);
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::UNRELIABLE, to, std::move(message));
 }
+
+void StcRpc::SetTimer(ClientId to, unsigned short seconds) const noexcept
+{
+    Message message(2, STC_SET_TIMER, reinterpret_cast<char*>(&seconds));
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
+}
