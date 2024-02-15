@@ -15,6 +15,7 @@ using ClientId = SerializedEndpoint;
 namespace Level
 {
     static constexpr int MAINMENU = 0;
+    static constexpr int ONE_VS_ONE = 1;
 }
 
 class StcRpc {

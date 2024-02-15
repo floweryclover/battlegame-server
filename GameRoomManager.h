@@ -19,8 +19,9 @@ public:
     explicit GameRoomManager() noexcept;
     ~GameRoomManager() = default;
 
-    bool JoinPlayer(ClientId clientId, GameRoomId roomId);
-    bool StartMatchMaking(ClientId clientId);
+    void JoinPlayer(ClientId clientId, GameRoomId roomId);
+    void DestroyRoom(GameRoomId roomId) noexcept;
+    void StartMatchMaking(ClientId clientId);
     void StopMatchMaking(ClientId clientId);
     std::optional<GameRoomId> GetPlayerJoinedRoomId(ClientId clientId) const noexcept;
     void OnPlayerConnected(ClientId clientId);
@@ -28,17 +29,18 @@ public:
 
     void Tick();
 
-    GameRoom* GetGameRoom(GameRoomId roomId) noexcept;
-    const GameRoom* GetConstGameRoom(GameRoomId roomId) const noexcept;
+    BaseRoom* GetGameRoom(GameRoomId roomId) noexcept;
+    const BaseRoom* GetConstGameRoom(GameRoomId roomId) const noexcept;
 
 private:
     GameRoomId mNewRoomId;
     std::map<ClientId, GameRoomId> mRoomOfPlayers;
-    std::map<GameRoomId, GameRoom> mGameRooms;
-    std::queue<ClientId> mMatchMakingPlayers;
+    std::map<GameRoomId, std::unique_ptr<BaseRoom>> mGameRooms;
+    std::queue<GameRoomId> mRoomDestroyQueue;
 
-    static bool CheckIfPlayerNotValid(ClientId clientId);
-    bool IsValidGameRoom(GameRoomId roomId) const noexcept;
+    std::queue<ClientId> mMatchMakingQueue;
+    std::set<ClientId> mMatchMakingSet;
+
     bool IsPlayerInGameRoom(ClientId clientId) const noexcept;
 };
 

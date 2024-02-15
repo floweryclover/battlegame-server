@@ -7,49 +7,109 @@
 
 #include <set>
 #include <map>
+#include <memory>
+#include <chrono>
 #include "UnrealTypes.h"
+
+#define INTERFACE class
+#define IMPLEMENTS
 
 using SerializedEndpoint = unsigned long long;
 using ClientId = SerializedEndpoint;
 using GameRoomId = unsigned int;
 using EntityId = int;
 
-class GameRoom
+static constexpr GameRoomId ROOM_MAINMENU = 0;
+
+class BaseRoom
 {
 public:
-    static constexpr GameRoomId ROOM_MAINMENU = 0;
-    static constexpr GameRoomId ROOM_MATCHMAKING = 1;
+    BaseRoom(const BaseRoom&) noexcept = delete;
+    BaseRoom(BaseRoom&&) noexcept = delete;
+    BaseRoom& operator=(const BaseRoom&) noexcept = delete;
+    BaseRoom& operator=(BaseRoom&&) noexcept = delete;
 
-    GameRoom(const GameRoom& rhs) = delete;
-    GameRoom& operator=(const GameRoom& rhs) = delete;
-    explicit GameRoom(unsigned int roomId) noexcept;
-    GameRoom(GameRoom&& rhs) noexcept;
-    ~GameRoom() = default;
+    explicit BaseRoom(GameRoomId roomId) noexcept : mRoomId(roomId) {}
+    inline GameRoomId GetId() const noexcept { return mRoomId; }
 
-    inline bool IsEmpty() const { return mJoinedPlayers.size() == 0; }
-    inline bool IsFull() const { return mJoinedPlayers.size() == mMaxPlayerCount; }
-    inline bool IsPlayerJoined(ClientId clientId) const { return mJoinedPlayers.find(clientId) != mJoinedPlayers.end(); }
-    inline unsigned short GetMaxPlayerCount() const { return mMaxPlayerCount; }
-    inline unsigned short GetCurrentPlayerCount() const { return mJoinedPlayers.size(); }
-
-    void Tick() noexcept;
-    void InvokeOnPlayerJoined(ClientId clientId) noexcept;
-    void InvokeOnPlayerLeft(ClientId clientId) noexcept;
-    void InvokeOnPlayerPrepared(ClientId clientId) noexcept;
-    void InvokeOnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept;
-    void InvokeOnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept;
+    virtual ~BaseRoom() = default;
+    virtual void OnPlayerJoined(ClientId clientId) noexcept = 0;
+    virtual void OnPlayerLeft(ClientId clientId) noexcept = 0;
+    virtual void OnPlayerPrepared(ClientId clientId) noexcept = 0;
 
 private:
-    GameRoomId mRoomId;
-    unsigned short mMaxPlayerCount;
-    std::set<ClientId> mJoinedPlayers;
-    std::set<ClientId> mOnlinePlayers; // 접속되고 Prepared된 클라이언트들
-    std::set<EntityId> mEntities;
-    std::map<EntityId, Vector> mEntityLocations;
-    std::map<EntityId, double> mEntityDirections;
-    std::map<ClientId, EntityId> mPlayerControllingPawnIds;
-    int mNewEntityId;
+    const GameRoomId mRoomId;
 };
 
+INTERFACE IPlayerCountable
+{
+public:
+    virtual bool IsEmpty() const noexcept = 0;
+    virtual bool IsFull() const noexcept = 0;
+    virtual bool IsPlayerJoined(ClientId clientId) const noexcept = 0;
+    virtual std::vector<ClientId> GetAllPlayers() const noexcept = 0;
+};
+
+INTERFACE IEntityMoveable
+{
+public:
+    virtual void OnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept = 0;
+    virtual void OnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept = 0;
+};
+
+INTERFACE ITickable
+{
+public:
+    virtual void Tick() noexcept = 0;
+};
+
+class MainMenuRoom : public BaseRoom
+{
+public:
+    explicit MainMenuRoom(GameRoomId roomId) noexcept : BaseRoom(roomId) {}
+    ~MainMenuRoom() override = default;
+
+    void OnPlayerJoined(ClientId clientId) noexcept override;
+    void OnPlayerLeft(ClientId clientId) noexcept override;
+    void OnPlayerPrepared(ClientId clientId) noexcept override;
+};
+
+class OneVsOneGameRoom : public BaseRoom, IMPLEMENTS public ITickable, public IPlayerCountable, public IEntityMoveable
+{
+public:
+    explicit OneVsOneGameRoom(GameRoomId roomId) noexcept;
+    ~OneVsOneGameRoom() override = default;
+
+    void OnPlayerJoined(ClientId clientId) noexcept override;
+    void OnPlayerLeft(ClientId clientId) noexcept override;
+    void OnPlayerPrepared(ClientId clientId) noexcept override;
+    void Tick() noexcept override;
+    bool IsEmpty() const noexcept override;
+    bool IsFull() const noexcept override;
+    bool IsPlayerJoined(ClientId clientId) const noexcept override;
+    std::vector<ClientId> GetAllPlayers() const noexcept override;
+    void OnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept override;
+    void OnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept override;
+
+private:
+    enum class GameState
+    {
+        PREPARE_GAME,
+        PLAY_GAME,
+        GAME_END,
+        PENDING_DESTROY,
+    };
+    static constexpr int TIME_PREPARE_GAME = 10;
+    static constexpr int TIME_PLAY_GAME = 10;
+    static constexpr int TIME_GAME_END = 10;
+    static constexpr EntityId ENTITY_ID_PLAYER_BLUE = 1;
+    static constexpr EntityId ENTITY_ID_PLAYER_RED = 2;
+    std::chrono::time_point<std::chrono::steady_clock> mTimePoint;
+    std::chrono::seconds mTimeSet;
+    GameState mGameState;
+
+    std::optional<ClientId> mBluePlayer;
+    std::optional<ClientId> mRedPlayer;
+};
 
 #endif //BATTLEGAME_SERVER_GAMEROOM_H

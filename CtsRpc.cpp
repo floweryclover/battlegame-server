@@ -51,11 +51,13 @@ void CtsRpc::OnMoveCharacter(const Context &context, const Vector& position, dou
         return;
     }
 
-    BattleGameServer::GetInstance()
+    auto pGameRoom = dynamic_cast<IEntityMoveable*>(BattleGameServer::GetInstance()
     .GetGameData()
     .GetGameRoomManager()
-    .GetGameRoom(roomIdOption.value())
-    ->InvokeOnPlayerMove(context.GetClientId(), position, direction);
+    .GetGameRoom(roomIdOption.value()));
+
+    if (pGameRoom != nullptr)
+    {pGameRoom->OnPlayerMove(context.GetClientId(), position, direction);}
 }
 
 void CtsRpc::OnEnterNickname(const Context &context, std::string &&nickname) const noexcept
@@ -71,5 +73,16 @@ void CtsRpc::OnNotifyBattleGamePrepared(const Context &context) const noexcept
         return;
     }
 
-    BattleGameServer::GetInstance().GetGameData().GetGameRoomManager().GetGameRoom(gameRoomOption.value())->InvokeOnPlayerPrepared(context.GetClientId());
+    auto pBaseRoom = BattleGameServer::GetInstance()
+    .GetGameData()
+    .GetGameRoomManager()
+    .GetGameRoom(gameRoomOption.value());
+
+    if (pBaseRoom == nullptr)
+    {
+        std::cerr << "클라이언트 " << context.GetClientId() << ": 유효하지 않은 방에 OnPrepared() 호출" << std::endl;
+        return;
+    }
+
+    pBaseRoom->OnPlayerPrepared(context.GetClientId());
 }

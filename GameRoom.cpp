@@ -1,140 +1,168 @@
-//
-// Created by floweryclover on 2024-01-30.
-//
-
 #include "GameRoom.h"
 #include "GameData.h"
+#include "GameRoomManager.h"
 #include "BattleGameServer.h"
 #include "StcRpc.h"
-#include "ClientManager.h"
 #include <iostream>
 
-GameRoom::GameRoom(unsigned int roomId) noexcept : mRoomId(roomId), mNewEntityId(0)
+void MainMenuRoom::OnPlayerJoined(ClientId clientId) noexcept
+{ BattleGameServer::GetInstance().GetConstStcRpc().OpenLevel(clientId, Level::MAINMENU); }
+
+void MainMenuRoom::OnPlayerLeft(ClientId clientId) noexcept {}
+
+void MainMenuRoom::OnPlayerPrepared(ClientId clientId) noexcept {}
+
+// OneVsOneGameRoom 1대1 게임방
+
+OneVsOneGameRoom::OneVsOneGameRoom(GameRoomId roomId) noexcept : BaseRoom(roomId), mTimePoint(std::chrono::steady_clock::now()), mTimeSet(TIME_PREPARE_GAME), mGameState(GameState::PREPARE_GAME) {}
+
+void OneVsOneGameRoom::OnPlayerJoined(ClientId clientId) noexcept
+{ BattleGameServer::GetInstance().GetConstStcRpc().OpenLevel(clientId, Level::ONE_VS_ONE); }
+
+void OneVsOneGameRoom::OnPlayerLeft(ClientId clientId) noexcept
 {
-    this->mMaxPlayerCount = 4;
+    if (mBluePlayer.has_value() && mBluePlayer.value() == clientId)
+    {mBluePlayer = std::nullopt;}
+    else if (mRedPlayer.has_value() && mRedPlayer.value() == clientId)
+    {mRedPlayer = std::nullopt;}
 }
 
-GameRoom::GameRoom(GameRoom &&rhs) noexcept : GameRoom(rhs.mRoomId)
+void OneVsOneGameRoom::OnPlayerPrepared(ClientId clientId) noexcept
 {
-
-}
-
-void GameRoom::InvokeOnPlayerJoined(ClientId clientId) noexcept
-{
-    mJoinedPlayers.insert(clientId);
-    if (mRoomId == ROOM_MAINMENU)
+    if (mBluePlayer.has_value() && mRedPlayer.has_value())
     {
-        return;
-    }
-    else if (mRoomId == ROOM_MATCHMAKING)
-    {
-        std::cout << "플레이어 " << clientId << " 매치메이킹 시작" << std::endl;
-        return;
-    }
-    // 캐릭터 엔티티 생성
-    mEntities.emplace(mNewEntityId);
-    mPlayerControllingPawnIds.emplace(clientId, mNewEntityId);
-    mEntityLocations.emplace(mNewEntityId, Vector {0.0, 0.0, 400.0});
-    mEntityDirections.emplace(mNewEntityId, 0.0);
-    // 방 내 모든 플레이어에게 엔티티 생성 멀티캐스트
-    for (auto cIter = mOnlinePlayers.cbegin(); cIter != mOnlinePlayers.cend(); cIter++)
-    {
+        std::cerr << GetId() << " 번 방에 자리가 없는데도 새 플레이어가 입장했습니다." << std::endl;
         BattleGameServer::GetInstance()
-                .GetConstStcRpc()
-                .SpawnEntity(*cIter, mNewEntityId, mEntityLocations.at(mNewEntityId), mEntityDirections.at(mNewEntityId));
+        .GetGameData()
+        .GetGameRoomManager()
+        .DestroyRoom(GetId());
+        mGameState = GameState::PENDING_DESTROY;
+        return;
     }
-    mNewEntityId++;
-    std::cout << "플레이어 " << clientId << " 방 " << mRoomId << " 참여" << std::endl;
-    BattleGameServer::GetInstance()
-    .GetConstStcRpc()
-    .JoinedGameRoom(clientId);
+    if (!mBluePlayer.has_value())
+    {mBluePlayer = clientId;}
+    else
+    {mRedPlayer = clientId;}
 }
 
-void GameRoom::InvokeOnPlayerLeft(ClientId clientId) noexcept
+void OneVsOneGameRoom::Tick() noexcept
 {
-    mJoinedPlayers.erase(clientId);
-    if (mRoomId == ROOM_MAINMENU)
+    auto currentTime = std::chrono::steady_clock::now();
+    switch (mGameState)
     {
-        return;
-    }
-    else if (mRoomId == ROOM_MATCHMAKING)
-    {
-        std::cout << "플레이어 " << clientId << " 매치메이킹 종료" << std::endl;
-        return;
-    }
-    // 방 내 모든 플레이어에게 해당 플레이어 삭제를 멀티캐스트
-    mOnlinePlayers.erase(clientId);
-    if (mPlayerControllingPawnIds.contains(clientId))
-    {
-        EntityId playerPawnId = mPlayerControllingPawnIds.at(clientId);
-        for (auto cIter = mOnlinePlayers.cbegin(); cIter != mOnlinePlayers.cend(); cIter++)
+        case GameState::PREPARE_GAME:
         {
-            BattleGameServer::GetInstance()
-                    .GetConstStcRpc()
-                    .DespawnEntity(*cIter, playerPawnId);
-        }
-        mEntities.erase(playerPawnId);
-        mEntityLocations.erase(playerPawnId);
-        mEntityDirections.erase(playerPawnId);
-        mPlayerControllingPawnIds.erase(clientId);
-    }
+            if (currentTime > mTimePoint + mTimeSet)
+            {
+                // 플레이어들이 접속해있는지 확인하고, 아닐 경우 방 폭파
+                if (!mBluePlayer.has_value() || !mRedPlayer.has_value())
+                {
+                    mGameState = GameState::PENDING_DESTROY;
+                    BattleGameServer::GetInstance()
+                    .GetGameData()
+                    .GetGameRoomManager()
+                    .DestroyRoom(GetId());
+                    return;
+                }
 
-    std::cout << "플레이어 " << clientId << " 방 " << mRoomId << " 퇴장" << std::endl;
-    BattleGameServer::GetInstance()
-    .GetConstStcRpc()
-    .DisconnectedFromGame(clientId);
+                auto spawnPlayerCharacter = [](ClientId to, EntityId whose)
+                {
+                    BattleGameServer::GetConstInstance()
+                    .GetConstStcRpc()
+                    .SpawnEntity(
+                            to,
+                            whose,
+                            whose == ENTITY_ID_PLAYER_BLUE ? Vector { 100, 0, 200 } : Vector { -100, 0, 200 },
+                            whose == ENTITY_ID_PLAYER_BLUE ? 180.0 : 0.0);
+                };
+
+                spawnPlayerCharacter(mBluePlayer.value(), ENTITY_ID_PLAYER_BLUE);
+                spawnPlayerCharacter(mBluePlayer.value(), ENTITY_ID_PLAYER_RED);
+                spawnPlayerCharacter(mRedPlayer.value(), ENTITY_ID_PLAYER_BLUE);
+                spawnPlayerCharacter(mRedPlayer.value(), ENTITY_ID_PLAYER_RED);
+
+                BattleGameServer::GetConstInstance()
+                .GetConstStcRpc()
+                .PossessEntity(mBluePlayer.value(), ENTITY_ID_PLAYER_BLUE);
+
+                BattleGameServer::GetConstInstance()
+                .GetConstStcRpc()
+                .PossessEntity(mRedPlayer.value(), ENTITY_ID_PLAYER_RED);
+
+                mTimePoint = std::chrono::steady_clock::now();
+                mTimeSet = std::chrono::seconds(TIME_PLAY_GAME);
+                mGameState = GameState::PLAY_GAME;
+            }
+            return;
+        }
+        case GameState::PLAY_GAME:
+        {
+            // 누가 탈주하면 게임 종료
+            // 시간 지나서 게임 종료
+            if (!mBluePlayer.has_value() || !mRedPlayer.has_value()
+            || currentTime > mTimePoint + mTimeSet)
+            {
+                mTimePoint = std::chrono::steady_clock::now();
+                mTimeSet = std::chrono::seconds(TIME_GAME_END);
+                mGameState = GameState::GAME_END;
+            }
+            return;
+        }
+        case GameState::GAME_END:
+        {
+            // 시간 지나서 방 폭파
+            if (currentTime > mTimePoint + mTimeSet)
+            {
+                mGameState = GameState::PENDING_DESTROY;
+                BattleGameServer::GetInstance()
+                .GetGameData()
+                .GetGameRoomManager()
+                .DestroyRoom(GetId());
+            }
+            return;
+        }
+        case GameState::PENDING_DESTROY:
+        {return;}
+    }
 }
 
-void GameRoom::InvokeOnPlayerPrepared(ClientId clientId) noexcept
+bool OneVsOneGameRoom::IsEmpty() const noexcept
+{return !mBluePlayer.has_value() && !mRedPlayer.has_value();}
+
+bool OneVsOneGameRoom::IsFull() const noexcept
+{return mBluePlayer.has_value() && mRedPlayer.has_value();}
+
+bool OneVsOneGameRoom::IsPlayerJoined(ClientId clientId) const noexcept
 {
-    // 온라인 플레이어에 등록
-    mOnlinePlayers.emplace(clientId);
+    return
+    ((mBluePlayer.has_value() && mBluePlayer.value() == clientId)
+    || (mRedPlayer.has_value() && mRedPlayer.value() == clientId));
+}
 
-    // 이 클라이언트에게 모든 정보 보내기
-    for (auto cIter = mEntities.cbegin(); cIter != mEntities.cend(); cIter++)
-    {
-        BattleGameServer::GetInstance()
-        .GetConstStcRpc()
-        .SpawnEntity(clientId, *cIter, mEntityLocations.at(*cIter), mEntityDirections.at(*cIter));
-    }
+std::vector<ClientId> OneVsOneGameRoom::GetAllPlayers() const noexcept
+{
+    if (!mRedPlayer.has_value() && !mBluePlayer.has_value())
+    {return {};}
+    else if (mRedPlayer.has_value() && mBluePlayer.has_value())
+    {return {mBluePlayer.value(), mRedPlayer.value()};}
+    else
+    {return {(mBluePlayer.has_value() ? mBluePlayer.value() : mRedPlayer.value())};}
+}
 
-    // 소유 폰 지정
+void OneVsOneGameRoom::OnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept
+{}
+
+void OneVsOneGameRoom::OnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept
+{
+    if (!mBluePlayer.has_value() || !mRedPlayer.has_value())
+    {return;}
+
     BattleGameServer::GetConstInstance()
     .GetConstStcRpc()
-    .PossessEntity(clientId, mPlayerControllingPawnIds.at(clientId));
-}
-
-void GameRoom::InvokeOnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept
-{
-    if (!mOnlinePlayers.contains(clientId))
-    {
-        std::cerr << mRoomId << "번 게임에 " << clientId << "클라이언트 이동이 요청되었으나 해당 클라이언트는 없습니다." << std::endl;
-        return;
-    }
-
-    InvokeOnEntityMove(mPlayerControllingPawnIds.at(clientId), location, direction);
-}
-
-void GameRoom::InvokeOnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept
-{
-    if (!mEntities.contains(entityId))
-    {
-        std::cerr << mRoomId << "번 게임에 ID " << entityId << " 엔티티 이동이 요청되었으나 해당 엔티티는 없습니다." << std::endl;
-        return;
-    }
-
-    mEntityLocations.at(entityId) = location;
-    mEntityDirections.at(entityId) = direction;
-
-    for (auto cIter = mOnlinePlayers.cbegin(); cIter != mOnlinePlayers.cend(); cIter++)
-    {
-        BattleGameServer::GetConstInstance()
-        .GetConstStcRpc()
-        .MoveEntity(*cIter, entityId, location, direction);
-    }
-}
-
-void GameRoom::Tick() noexcept
-{
-
+    .MoveEntity(
+            clientId == mBluePlayer.value() ? mRedPlayer.value() : mBluePlayer.value(),
+            clientId == mBluePlayer.value() ? ENTITY_ID_PLAYER_BLUE : ENTITY_ID_PLAYER_RED,
+            location,
+            direction
+            );
 }
