@@ -56,8 +56,23 @@ void StcRpc::MoveEntity(ClientId to, int entityId, const Vector &location, doubl
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::UNRELIABLE, to, std::move(message));
 }
 
-void StcRpc::SetTimer(ClientId to, unsigned short seconds) const noexcept
+void StcRpc::SetTimer(ClientId to, unsigned short seconds, const std::string& text) const noexcept
 {
-    Message message(2, STC_SET_TIMER, reinterpret_cast<char*>(&seconds));
+    if (text.length() > 30)
+    {
+        std::cerr << "SetTimer()의 text 길이가 너무 깁니다." << std::endl;
+        return;
+    }
+
+    char serialized[32];
+    memcpy(serialized, &seconds, 2);
+    memcpy(serialized+2, text.data(), text.length());
+    Message message(2+text.length(), STC_SET_TIMER, serialized);
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
+}
+
+void StcRpc::SignalGameState(ClientId to, int signal) const noexcept
+{
+    Message message(4, STC_SIGNAL_GAME_STATE, reinterpret_cast<char*>(&signal));
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }

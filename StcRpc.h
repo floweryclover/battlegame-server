@@ -6,6 +6,7 @@
 #define BATTLEGAME_SERVER_STCRPC_H
 
 #include "UnrealTypes.h"
+#include <string>
 
 class Message;
 
@@ -27,6 +28,7 @@ public:
     static constexpr int STC_POSSESS_ENTITY = 6;
     static constexpr int STC_MOVE_ENTITY = 7;
     static constexpr int STC_SET_TIMER = 8;
+    static constexpr int STC_SIGNAL_GAME_STATE = 9;
 
     StcRpc(const StcRpc& rhs) = delete;
     StcRpc(StcRpc&& rhs) = delete;
@@ -41,7 +43,8 @@ public:
     void DespawnEntity(ClientId to, int entityId) const noexcept;
     void PossessEntity(ClientId to, int entityId) const noexcept;
     void MoveEntity(ClientId to, int entityId, const Vector& location, double direction) const noexcept;
-    void SetTimer(ClientId to, unsigned short seconds) const noexcept;
+    void SetTimer(ClientId to, unsigned short seconds, const std::string& text) const noexcept;
+    void SignalGameState(ClientId to, int signal) const noexcept;
 };
 
 

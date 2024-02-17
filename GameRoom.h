@@ -92,21 +92,22 @@ public:
     void OnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept override;
 
 private:
-    enum class GameState
-    {
-        PREPARE_GAME,
-        PLAY_GAME,
-        GAME_END,
-        PENDING_DESTROY,
-    };
+    static constexpr int STATE_PREPARE_GAME = 1;
+    static constexpr int STATE_PLAY_GAME = 2;
+    static constexpr int STATE_GAME_END = 3;
+    static constexpr int STATE_PENDING_DESTROY = 4;
+
     static constexpr int TIME_PREPARE_GAME = 10;
     static constexpr int TIME_PLAY_GAME = 10;
     static constexpr int TIME_GAME_END = 10;
     static constexpr EntityId ENTITY_ID_PLAYER_BLUE = 1;
     static constexpr EntityId ENTITY_ID_PLAYER_RED = 2;
+
+    void SetRemainTimeTo(ClientId clientId, const char* text) const noexcept;
+
     std::chrono::time_point<std::chrono::steady_clock> mTimePoint;
     std::chrono::seconds mTimeSet;
-    GameState mGameState;
+    int mGameState;
 
     std::optional<ClientId> mBluePlayer;
     std::optional<ClientId> mRedPlayer;

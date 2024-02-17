@@ -14,7 +14,7 @@ void MainMenuRoom::OnPlayerPrepared(ClientId clientId) noexcept {}
 
 // OneVsOneGameRoom 1대1 게임방
 
-OneVsOneGameRoom::OneVsOneGameRoom(GameRoomId roomId) noexcept : BaseRoom(roomId), mTimePoint(std::chrono::steady_clock::now()), mTimeSet(TIME_PREPARE_GAME), mGameState(GameState::PREPARE_GAME) {}
+OneVsOneGameRoom::OneVsOneGameRoom(GameRoomId roomId) noexcept : BaseRoom(roomId), mTimePoint(std::chrono::steady_clock::now()), mTimeSet(TIME_PREPARE_GAME), mGameState(STATE_PREPARE_GAME) {}
 
 void OneVsOneGameRoom::OnPlayerJoined(ClientId clientId) noexcept
 { BattleGameServer::GetInstance().GetConstStcRpc().OpenLevel(clientId, Level::ONE_VS_ONE); }
@@ -36,7 +36,7 @@ void OneVsOneGameRoom::OnPlayerPrepared(ClientId clientId) noexcept
         .GetGameData()
         .GetGameRoomManager()
         .DestroyRoom(GetId());
-        mGameState = GameState::PENDING_DESTROY;
+        mGameState = STATE_PENDING_DESTROY;
         return;
     }
     if (!mBluePlayer.has_value())
@@ -44,11 +44,11 @@ void OneVsOneGameRoom::OnPlayerPrepared(ClientId clientId) noexcept
     else
     {mRedPlayer = clientId;}
 
-    auto remainTime = mTimePoint+mTimeSet-std::chrono::steady_clock::now();
-    auto a = std::chrono::duration_cast<std::chrono::seconds>(remainTime).count();
+    SetRemainTimeTo(clientId, "게임 시작까지");
+
     BattleGameServer::GetConstInstance()
     .GetConstStcRpc()
-    .SetTimer(clientId, a);
+    .SignalGameState(clientId, STATE_PREPARE_GAME);
 }
 
 void OneVsOneGameRoom::Tick() noexcept
@@ -56,14 +56,14 @@ void OneVsOneGameRoom::Tick() noexcept
     auto currentTime = std::chrono::steady_clock::now();
     switch (mGameState)
     {
-        case GameState::PREPARE_GAME:
+        case STATE_PREPARE_GAME:
         {
             if (currentTime > mTimePoint + mTimeSet)
             {
                 // 플레이어들이 접속해있는지 확인하고, 아닐 경우 방 폭파
                 if (!mBluePlayer.has_value() || !mRedPlayer.has_value())
                 {
-                    mGameState = GameState::PENDING_DESTROY;
+                    mGameState = STATE_PENDING_DESTROY;
                     BattleGameServer::GetInstance()
                     .GetGameData()
                     .GetGameRoomManager()
@@ -97,11 +97,23 @@ void OneVsOneGameRoom::Tick() noexcept
 
                 mTimePoint = std::chrono::steady_clock::now();
                 mTimeSet = std::chrono::seconds(TIME_PLAY_GAME);
-                mGameState = GameState::PLAY_GAME;
+                mGameState = STATE_PLAY_GAME;
+
+                SetRemainTimeTo(mBluePlayer.value(), "게임 종료까지");
+                SetRemainTimeTo(mRedPlayer.value(), "게임 종료까지");
+
+                auto signalGameStart = [](ClientId to)
+                {
+                    BattleGameServer::GetConstInstance()
+                    .GetConstStcRpc()
+                    .SignalGameState(to, STATE_PLAY_GAME);
+                };
+                signalGameStart(mBluePlayer.value());
+                signalGameStart(mRedPlayer.value());
             }
             return;
         }
-        case GameState::PLAY_GAME:
+        case STATE_PLAY_GAME:
         {
             // 누가 탈주하면 게임 종료
             // 시간 지나서 게임 종료
@@ -110,16 +122,28 @@ void OneVsOneGameRoom::Tick() noexcept
             {
                 mTimePoint = std::chrono::steady_clock::now();
                 mTimeSet = std::chrono::seconds(TIME_GAME_END);
-                mGameState = GameState::GAME_END;
+                mGameState = STATE_GAME_END;
+
+                SetRemainTimeTo(mBluePlayer.value(), "메인 화면으로 복귀");
+                SetRemainTimeTo(mRedPlayer.value(), "메인 화면으로 복귀");
+
+                auto signalGameEnd = [](ClientId to)
+                {
+                    BattleGameServer::GetConstInstance()
+                            .GetConstStcRpc()
+                            .SignalGameState(to, STATE_GAME_END);
+                };
+                signalGameEnd(mBluePlayer.value());
+                signalGameEnd(mRedPlayer.value());
             }
             return;
         }
-        case GameState::GAME_END:
+        case STATE_GAME_END:
         {
             // 시간 지나서 방 폭파
             if (currentTime > mTimePoint + mTimeSet)
             {
-                mGameState = GameState::PENDING_DESTROY;
+                mGameState = STATE_PENDING_DESTROY;
                 BattleGameServer::GetInstance()
                 .GetGameData()
                 .GetGameRoomManager()
@@ -127,7 +151,7 @@ void OneVsOneGameRoom::Tick() noexcept
             }
             return;
         }
-        case GameState::PENDING_DESTROY:
+        case STATE_PENDING_DESTROY:
         {return;}
     }
 }
@@ -171,4 +195,14 @@ void OneVsOneGameRoom::OnPlayerMove(ClientId clientId, const Vector& location, d
             location,
             direction
             );
+}
+
+void OneVsOneGameRoom::SetRemainTimeTo(ClientId clientId, const char* text) const noexcept
+{
+    auto remainTime = std::chrono::duration_cast<std::chrono::seconds>
+            (mTimePoint+mTimeSet-std::chrono::steady_clock::now())
+            .count();
+    BattleGameServer::GetConstInstance()
+            .GetConstStcRpc()
+            .SetTimer(clientId, remainTime, text);
 }
