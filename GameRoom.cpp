@@ -14,7 +14,14 @@ void MainMenuRoom::OnPlayerPrepared(ClientId clientId) noexcept {}
 
 // OneVsOneGameRoom 1대1 게임방
 
-OneVsOneGameRoom::OneVsOneGameRoom(GameRoomId roomId) noexcept : BaseRoom(roomId), mTimePoint(std::chrono::steady_clock::now()), mTimeSet(TIME_PREPARE_GAME), mGameState(STATE_PREPARE_GAME) {}
+OneVsOneGameRoom::OneVsOneGameRoom(GameRoomId roomId) noexcept
+: BaseRoom(roomId),
+mTimePoint(std::chrono::steady_clock::now()),
+mTimeSet(TIME_PREPARE_GAME),
+mGameState(STATE_PREPARE_GAME),
+mBlueScore(0),
+mRedScore(0)
+{}
 
 void OneVsOneGameRoom::OnPlayerJoined(ClientId clientId) noexcept
 { BattleGameServer::GetInstance().GetConstStcRpc().OpenLevel(clientId, Level::ONE_VS_ONE); }
@@ -40,15 +47,37 @@ void OneVsOneGameRoom::OnPlayerPrepared(ClientId clientId) noexcept
         return;
     }
     if (!mBluePlayer.has_value())
-    {mBluePlayer = clientId;}
+    {
+        mBluePlayer = clientId;
+        BattleGameServer::GetConstInstance()
+        .GetConstStcRpc()
+        .AssignTeamId(clientId, TEAM_ID_BLUE);
+    }
     else
-    {mRedPlayer = clientId;}
+    {
+        mRedPlayer = clientId;
+        BattleGameServer::GetConstInstance()
+        .GetConstStcRpc()
+        .AssignTeamId(clientId, TEAM_ID_RED);
+    }
 
     SetRemainTimeTo(clientId, "게임 시작까지");
 
     BattleGameServer::GetConstInstance()
     .GetConstStcRpc()
     .SignalGameState(clientId, STATE_PREPARE_GAME);
+
+    BattleGameServer::GetConstInstance()
+    .GetConstStcRpc()
+    .SetScore(clientId, 0, WIN_SCORE);
+
+    BattleGameServer::GetConstInstance()
+    .GetConstStcRpc()
+    .SetScore(clientId, TEAM_ID_BLUE, 0);
+
+    BattleGameServer::GetConstInstance()
+    .GetConstStcRpc()
+    .SetScore(clientId, TEAM_ID_RED, 0);
 }
 
 void OneVsOneGameRoom::Tick() noexcept
@@ -205,4 +234,46 @@ void OneVsOneGameRoom::SetRemainTimeTo(ClientId clientId, const char* text) cons
     BattleGameServer::GetConstInstance()
             .GetConstStcRpc()
             .SetTimer(clientId, remainTime, text);
+}
+
+void OneVsOneGameRoom::OnOwningCharacterDestroyed(ClientId clientId) noexcept
+{
+    if (!IsPlayerJoined(clientId) || !IsFull() || mGameState != STATE_PLAY_GAME)
+    {return;}
+
+    EntityId destroyed = (clientId == mBluePlayer.value() ? ENTITY_ID_PLAYER_BLUE : ENTITY_ID_PLAYER_RED);
+
+    IncrementScore(clientId == mBluePlayer.value() ? TEAM_ID_RED : TEAM_ID_BLUE);
+
+    auto respawnTo = [destroyed](ClientId to)
+    {
+        BattleGameServer::GetConstInstance()
+        .GetConstStcRpc()
+        .RespawnEntity(to,
+                       destroyed,
+                       destroyed == ENTITY_ID_PLAYER_BLUE ? Vector { 100, 0, 2000 } : Vector {-100, 0, 2000},
+                       destroyed == ENTITY_ID_PLAYER_BLUE ? 180.0 : 0.0);
+    };
+    respawnTo(mBluePlayer.value());
+    respawnTo(mRedPlayer.value());
+}
+
+void OneVsOneGameRoom::IncrementScore(int teamId) noexcept
+{
+    if (!mBluePlayer.has_value() || !mRedPlayer.has_value() || mGameState != STATE_PLAY_GAME)
+    {return;}
+
+    int scoreToSend;
+    if (teamId == TEAM_ID_BLUE)
+    {scoreToSend = ++mBlueScore;}
+    else
+    {scoreToSend = ++mRedScore;}
+
+    BattleGameServer::GetConstInstance()
+    .GetConstStcRpc()
+    .SetScore(mBluePlayer.value(), teamId, scoreToSend);
+
+    BattleGameServer::GetConstInstance()
+    .GetConstStcRpc()
+    .SetScore(mRedPlayer.value(), teamId, scoreToSend);
 }

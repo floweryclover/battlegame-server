@@ -29,6 +29,9 @@ public:
     static constexpr int STC_MOVE_ENTITY = 7;
     static constexpr int STC_SET_TIMER = 8;
     static constexpr int STC_SIGNAL_GAME_STATE = 9;
+    static constexpr int STC_RESPAWN_ENTITY = 10;
+    static constexpr int STC_SET_SCORE = 11;
+    static constexpr int STC_ASSIGN_TEAM_ID = 12;
 
     StcRpc(const StcRpc& rhs) = delete;
     StcRpc(StcRpc&& rhs) = delete;
@@ -45,6 +48,9 @@ public:
     void MoveEntity(ClientId to, int entityId, const Vector& location, double direction) const noexcept;
     void SetTimer(ClientId to, unsigned short seconds, const std::string& text) const noexcept;
     void SignalGameState(ClientId to, int signal) const noexcept;
+    void RespawnEntity(ClientId to, int entityId, const Vector& location, double direction) const noexcept;
+    void SetScore(ClientId to, int team, int score) const noexcept;
+    void AssignTeamId(ClientId to, int teamId) const noexcept;
 };
 
 

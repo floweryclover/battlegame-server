@@ -36,7 +36,7 @@ void GameRoomManager::Tick()
             }
             else // 플레이어 A는 실제로 매치메이킹 중이지만, B는 매치메이킹중이지 않음. A를 다시 큐에 넣음
             {
-                mMatchMakingSet.emplace(playerA);
+                mMatchMakingQueue.emplace(playerA);
                 mMatchMakingSet.emplace(playerA);
             }
         }

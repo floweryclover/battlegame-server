@@ -18,6 +18,7 @@ public:
     static constexpr int CTS_REQUEST_MATCHMAKING = 1;
     static constexpr int CTS_MOVE_CHARACTER = 2;
     static constexpr int CTS_NOTIFY_BATTLEGAME_PREPARED = 3;
+    static constexpr int CTS_NOTIFY_OWNING_CHARACTER_DESTROYED = 4;
 
     explicit CtsRpc() = default;
     ~CtsRpc() = default;
@@ -28,6 +29,7 @@ private:
     void OnMoveCharacter(const Context& context, const Vector& position, double direction) const noexcept;
     void OnEnterNickname(const Context& context, std::string&& nickname) const noexcept;
     void OnNotifyBattleGamePrepared(const Context& context) const noexcept;
+    void OnNotifyOwningCharacterDestroyed(const Context& context) const noexcept;
 };
 
 

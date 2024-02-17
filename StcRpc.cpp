@@ -76,3 +76,31 @@ void StcRpc::SignalGameState(ClientId to, int signal) const noexcept
     Message message(4, STC_SIGNAL_GAME_STATE, reinterpret_cast<char*>(&signal));
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }
+
+void StcRpc::RespawnEntity(ClientId to, int entityId, const Vector &location, double direction) const noexcept
+{
+    char serialized[36];
+    memcpy(serialized, &entityId, 4);
+    memcpy(serialized+4, &location.X, 8);
+    memcpy(serialized+12, &location.Y, 8);
+    memcpy(serialized+20, &location.Z, 8);
+    memcpy(serialized+28, &direction, 8);
+    Message message(36, STC_RESPAWN_ENTITY, serialized);
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
+
+}
+
+void StcRpc::SetScore(ClientId to, int team, int score) const noexcept
+{
+    char serialized[8];
+    memcpy(serialized, &team, 4);
+    memcpy(serialized+4, &score, 4);
+    Message message(8, STC_SET_SCORE, serialized);
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
+}
+
+void StcRpc::AssignTeamId(ClientId to, int teamId) const noexcept
+{
+    Message message(4, STC_ASSIGN_TEAM_ID, reinterpret_cast<char*>(&teamId));
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
+}

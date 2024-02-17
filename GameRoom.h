@@ -50,9 +50,10 @@ public:
     virtual std::vector<ClientId> GetAllPlayers() const noexcept = 0;
 };
 
-INTERFACE IEntityMoveable
+INTERFACE IHasEntity
 {
 public:
+    virtual void OnOwningCharacterDestroyed(ClientId clientId) noexcept = 0;
     virtual void OnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept = 0;
     virtual void OnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept = 0;
 };
@@ -74,7 +75,7 @@ public:
     void OnPlayerPrepared(ClientId clientId) noexcept override;
 };
 
-class OneVsOneGameRoom : public BaseRoom, IMPLEMENTS public ITickable, public IPlayerCountable, public IEntityMoveable
+class OneVsOneGameRoom : public BaseRoom, IMPLEMENTS public ITickable, public IPlayerCountable, public IHasEntity
 {
 public:
     explicit OneVsOneGameRoom(GameRoomId roomId) noexcept;
@@ -90,6 +91,7 @@ public:
     std::vector<ClientId> GetAllPlayers() const noexcept override;
     void OnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept override;
     void OnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept override;
+    void OnOwningCharacterDestroyed(ClientId clientId) noexcept override;
 
 private:
     static constexpr int STATE_PREPARE_GAME = 1;
@@ -98,12 +100,21 @@ private:
     static constexpr int STATE_PENDING_DESTROY = 4;
 
     static constexpr int TIME_PREPARE_GAME = 10;
-    static constexpr int TIME_PLAY_GAME = 10;
+    static constexpr int TIME_PLAY_GAME = 60;
     static constexpr int TIME_GAME_END = 10;
+
     static constexpr EntityId ENTITY_ID_PLAYER_BLUE = 1;
     static constexpr EntityId ENTITY_ID_PLAYER_RED = 2;
 
+    static constexpr int TEAM_ID_BLUE = 1;
+    static constexpr int TEAM_ID_RED = 2;
+
+    static constexpr int WIN_SCORE = 5;
+    int mBlueScore;
+    int mRedScore;
+
     void SetRemainTimeTo(ClientId clientId, const char* text) const noexcept;
+    void IncrementScore(int teamId) noexcept;
 
     std::chrono::time_point<std::chrono::steady_clock> mTimePoint;
     std::chrono::seconds mTimeSet;

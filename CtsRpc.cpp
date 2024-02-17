@@ -28,6 +28,9 @@ void CtsRpc::HandleMessage(const Context& context, const Message& message) const
         case CtsRpc::CTS_NOTIFY_BATTLEGAME_PREPARED:
             OnNotifyBattleGamePrepared(context);
             break;
+        case CtsRpc::CTS_NOTIFY_OWNING_CHARACTER_DESTROYED:
+            OnNotifyOwningCharacterDestroyed(context);
+            break;
     }
 }
 
@@ -51,7 +54,7 @@ void CtsRpc::OnMoveCharacter(const Context &context, const Vector& position, dou
         return;
     }
 
-    auto pGameRoom = dynamic_cast<IEntityMoveable*>(BattleGameServer::GetInstance()
+    auto pGameRoom = dynamic_cast<IHasEntity*>(BattleGameServer::GetInstance()
     .GetGameData()
     .GetGameRoomManager()
     .GetGameRoom(roomIdOption.value()));
@@ -69,9 +72,7 @@ void CtsRpc::OnNotifyBattleGamePrepared(const Context &context) const noexcept
 {
     auto gameRoomOption = BattleGameServer::GetInstance().GetGameData().GetGameRoomManager().GetPlayerJoinedRoomId(context.GetClientId());
     if (!gameRoomOption.has_value())
-    {
-        return;
-    }
+    {return;}
 
     auto pBaseRoom = BattleGameServer::GetInstance()
     .GetGameData()
@@ -85,4 +86,27 @@ void CtsRpc::OnNotifyBattleGamePrepared(const Context &context) const noexcept
     }
 
     pBaseRoom->OnPlayerPrepared(context.GetClientId());
+}
+
+void CtsRpc::OnNotifyOwningCharacterDestroyed(const Context &context) const noexcept
+{
+    auto gameRoomOption = BattleGameServer::GetInstance().GetConstGameData().GetConstGameRoomManager().GetPlayerJoinedRoomId(context.GetClientId());
+    if (!gameRoomOption.has_value())
+    {return;}
+
+    auto pBaseRoom = BattleGameServer::GetInstance()
+    .GetGameData()
+    .GetGameRoomManager()
+    .GetGameRoom(gameRoomOption.value());
+    if (pBaseRoom == nullptr)
+    {
+        std::cerr << "클라이언트 " << context.GetClientId() << ": 유효하지 않은 방에 OnOwningCharacterDestroyed() 호출" << std::endl;
+        return;
+    }
+
+    auto pHasEntityRoom = dynamic_cast<IHasEntity*>(pBaseRoom);
+    if (pHasEntityRoom == nullptr)
+    {return;}
+
+    pHasEntityRoom->OnOwningCharacterDestroyed(context.GetClientId());
 }
