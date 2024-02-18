@@ -14,7 +14,13 @@ public:
     double X;
     double Y;
     double Z;
+    inline const Vector operator+(const Vector& rhs) const noexcept {return Vector { this->X + rhs.X, this->Y + rhs.Y, this->Z + rhs.Z };}
+    inline const Vector operator-(const Vector& rhs) const noexcept {return Vector { this->X - rhs.X, this->Y - rhs.Y, this->Z - rhs.Z };}
+
+    double DistanceTo(const Vector& rhs) const noexcept;
 };
+
+
 
 
 #endif //BATTLEGAME_SERVER_UNREALTYPES_H

@@ -14,6 +14,8 @@ void MainMenuRoom::OnPlayerPrepared(ClientId clientId) noexcept {}
 
 // OneVsOneGameRoom 1대1 게임방
 
+const Vector OneVsOneGameRoom::CENTER_LOCATION = Vector {0, 0, 0};
+
 OneVsOneGameRoom::OneVsOneGameRoom(GameRoomId roomId) noexcept
 : BaseRoom(roomId),
 mTimePoint(std::chrono::steady_clock::now()),
@@ -100,15 +102,19 @@ void OneVsOneGameRoom::Tick() noexcept
                     return;
                 }
 
-                auto spawnPlayerCharacter = [](ClientId to, EntityId whose)
+                mBlueLocation = Vector {180,0,1000};
+                mRedLocation = Vector {-180,0,1000};
+                mBlueAngle = 180;
+                mRedAngle = 0;
+                auto spawnPlayerCharacter = [this](ClientId to, EntityId whose)
                 {
                     BattleGameServer::GetConstInstance()
                     .GetConstStcRpc()
                     .SpawnEntity(
                             to,
                             whose,
-                            whose == ENTITY_ID_PLAYER_BLUE ? Vector { 100, 0, 2000 } : Vector { -100, 0, 2000 },
-                            whose == ENTITY_ID_PLAYER_BLUE ? 180.0 : 0.0);
+                            whose == ENTITY_ID_PLAYER_BLUE ? mBlueLocation : mRedLocation,
+                            whose == ENTITY_ID_PLAYER_BLUE ? mBlueAngle : mRedAngle);
                 };
 
                 spawnPlayerCharacter(mBluePlayer.value(), ENTITY_ID_PLAYER_BLUE);
@@ -125,11 +131,11 @@ void OneVsOneGameRoom::Tick() noexcept
                 .PossessEntity(mRedPlayer.value(), ENTITY_ID_PLAYER_RED);
 
                 mTimePoint = std::chrono::steady_clock::now();
-                mTimeSet = std::chrono::seconds(TIME_PLAY_GAME);
+                mTimeSet = std::chrono::seconds(TIME_GAME_ONE_ROUND);
                 mGameState = STATE_PLAY_GAME;
 
-                SetRemainTimeTo(mBluePlayer.value(), "게임 종료까지");
-                SetRemainTimeTo(mRedPlayer.value(), "게임 종료까지");
+                SetRemainTimeTo(mBluePlayer.value(), "라운드 종료까지");
+                SetRemainTimeTo(mRedPlayer.value(), "라운드 종료까지");
 
                 auto signalGameStart = [](ClientId to)
                 {
@@ -144,10 +150,8 @@ void OneVsOneGameRoom::Tick() noexcept
         }
         case STATE_PLAY_GAME:
         {
-            // 누가 탈주하면 게임 종료
-            // 시간 지나서 게임 종료
-            if (!mBluePlayer.has_value() || !mRedPlayer.has_value()
-            || currentTime > mTimePoint + mTimeSet)
+            if (!mBluePlayer.has_value() || !mRedPlayer.has_value() // 누가 탈주하면 게임 바로 종료
+            || mBlueScore >= 5 || mRedScore >= 5) // 5점 이상 획득한 플레이어가 있다면 종료
             {
                 mTimePoint = std::chrono::steady_clock::now();
                 mTimeSet = std::chrono::seconds(TIME_GAME_END);
@@ -164,6 +168,26 @@ void OneVsOneGameRoom::Tick() noexcept
                 };
                 signalGameEnd(mBluePlayer.value());
                 signalGameEnd(mRedPlayer.value());
+            }
+
+            // 게임 질질 끄는 것 방지.
+            // 일정 시간이 지나면 중앙에서 더 가까운 사람이 1점 획득
+            if (currentTime > mTimePoint + mTimeSet)
+            {
+                double blueDistance = mBlueLocation.DistanceTo(CENTER_LOCATION);
+                double redDistance = mBlueLocation.DistanceTo(CENTER_LOCATION);
+
+                bool isBlueWin = blueDistance < redDistance;
+
+                IncrementScore(isBlueWin ? TEAM_ID_BLUE : TEAM_ID_RED);
+                RespawnPlayer(TEAM_ID_BLUE);
+                RespawnPlayer(TEAM_ID_RED);
+
+                mTimePoint = std::chrono::steady_clock::now();
+                mTimeSet = std::chrono::seconds(TIME_GAME_ONE_ROUND);
+
+                SetRemainTimeTo(mBluePlayer.value(), "라운드 종료까지");
+                SetRemainTimeTo(mRedPlayer.value(), "라운드 종료까지");
             }
             return;
         }
@@ -216,6 +240,17 @@ void OneVsOneGameRoom::OnPlayerMove(ClientId clientId, const Vector& location, d
     if (!mBluePlayer.has_value() || !mRedPlayer.has_value())
     {return;}
 
+    if (clientId == mBluePlayer.value())
+    {
+        mBlueLocation = location;
+        mBlueAngle = direction;
+    }
+    else
+    {
+        mRedLocation = location;
+        mRedAngle = direction;
+    }
+
     BattleGameServer::GetConstInstance()
     .GetConstStcRpc()
     .MoveEntity(
@@ -244,18 +279,13 @@ void OneVsOneGameRoom::OnOwningCharacterDestroyed(ClientId clientId) noexcept
     EntityId destroyed = (clientId == mBluePlayer.value() ? ENTITY_ID_PLAYER_BLUE : ENTITY_ID_PLAYER_RED);
 
     IncrementScore(clientId == mBluePlayer.value() ? TEAM_ID_RED : TEAM_ID_BLUE);
+    RespawnPlayer(clientId == mBluePlayer.value() ? TEAM_ID_BLUE : TEAM_ID_RED);
 
-    auto respawnTo = [destroyed](ClientId to)
-    {
-        BattleGameServer::GetConstInstance()
-        .GetConstStcRpc()
-        .RespawnEntity(to,
-                       destroyed,
-                       destroyed == ENTITY_ID_PLAYER_BLUE ? Vector { 100, 0, 2000 } : Vector {-100, 0, 2000},
-                       destroyed == ENTITY_ID_PLAYER_BLUE ? 180.0 : 0.0);
-    };
-    respawnTo(mBluePlayer.value());
-    respawnTo(mRedPlayer.value());
+    mTimePoint = std::chrono::steady_clock::now();
+    mTimeSet = std::chrono::seconds(TIME_GAME_ONE_ROUND);
+
+    SetRemainTimeTo(mBluePlayer.value(), "라운드 종료까지");
+    SetRemainTimeTo(mRedPlayer.value(), "라운드 종료까지");
 }
 
 void OneVsOneGameRoom::IncrementScore(int teamId) noexcept
@@ -276,4 +306,19 @@ void OneVsOneGameRoom::IncrementScore(int teamId) noexcept
     BattleGameServer::GetConstInstance()
     .GetConstStcRpc()
     .SetScore(mRedPlayer.value(), teamId, scoreToSend);
+}
+
+void OneVsOneGameRoom::RespawnPlayer(int teamId) noexcept
+{
+    auto respawnTo = [teamId, this](ClientId to)
+    {
+        BattleGameServer::GetConstInstance()
+                .GetConstStcRpc()
+                .RespawnEntity(to,
+                               teamId == TEAM_ID_BLUE ? ENTITY_ID_PLAYER_BLUE : ENTITY_ID_PLAYER_RED,
+                               teamId == TEAM_ID_BLUE ? (mBlueLocation = Vector {100, 0, 1000}) : (mRedLocation = Vector {-100, 0, 1000}),
+                               teamId == TEAM_ID_BLUE ? (mBlueAngle = 180) : (mRedAngle = 0));
+    };
+    respawnTo(mBluePlayer.value());
+    respawnTo(mRedPlayer.value());
 }

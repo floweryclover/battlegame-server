@@ -100,7 +100,7 @@ private:
     static constexpr int STATE_PENDING_DESTROY = 4;
 
     static constexpr int TIME_PREPARE_GAME = 10;
-    static constexpr int TIME_PLAY_GAME = 60;
+    static constexpr int TIME_GAME_ONE_ROUND = 20;
     static constexpr int TIME_GAME_END = 10;
 
     static constexpr EntityId ENTITY_ID_PLAYER_BLUE = 1;
@@ -110,11 +110,13 @@ private:
     static constexpr int TEAM_ID_RED = 2;
 
     static constexpr int WIN_SCORE = 5;
+    static const Vector CENTER_LOCATION;
     int mBlueScore;
     int mRedScore;
 
     void SetRemainTimeTo(ClientId clientId, const char* text) const noexcept;
     void IncrementScore(int teamId) noexcept;
+    void RespawnPlayer(int teamId) noexcept;
 
     std::chrono::time_point<std::chrono::steady_clock> mTimePoint;
     std::chrono::seconds mTimeSet;
@@ -122,6 +124,11 @@ private:
 
     std::optional<ClientId> mBluePlayer;
     std::optional<ClientId> mRedPlayer;
+
+    Vector mBlueLocation;
+    Vector mRedLocation;
+    double mBlueAngle;
+    double mRedAngle;
 };
 
 #endif //BATTLEGAME_SERVER_GAMEROOM_H
