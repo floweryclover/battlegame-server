@@ -27,13 +27,13 @@ public:
     void OnPlayerDisconnected(ClientId clientId);
 
     bool SetPlayerNickname(ClientId clientId, const std::string& nickname);
-    inline const std::string* GetPlayerNickname(ClientId clientId) { return mNicknames.contains(clientId) ? &mNicknames[clientId] : nullptr; }
+    inline const std::string* GetPlayerNickname(ClientId clientId) const { return mNicknames.contains(clientId) ? &mNicknames.at(clientId) : nullptr; }
 
     inline GameRoomManager& GetGameRoomManager() { return const_cast<GameRoomManager&>(GetConstGameRoomManager()); }
     inline const GameRoomManager& GetConstGameRoomManager() const { return *mpGameRoomManager; }
 
 private:
-    std::map<ClientId ,std::string> mNicknames;
+    std::map<ClientId, std::string> mNicknames;
     std::unique_ptr<GameRoomManager> mpGameRoomManager;
 };
 

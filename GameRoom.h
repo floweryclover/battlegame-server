@@ -114,7 +114,7 @@ private:
     int mBlueScore;
     int mRedScore;
 
-    void SetRemainTimeTo(ClientId clientId, const char* text) const noexcept;
+    void SetRemainTimeTo(ClientId clientId, const std::string& text) const noexcept;
     void IncrementScore(int teamId) noexcept;
     void RespawnPlayer(int teamId) noexcept;
 

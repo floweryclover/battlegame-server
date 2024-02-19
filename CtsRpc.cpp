@@ -15,22 +15,46 @@ void CtsRpc::HandleMessage(const Context& context, const Message& message) const
     switch (message.mHeaderMessageType)
     {
         case CtsRpc::CTS_REQUEST_MATCHMAKING:
+        {
             OnRequestMatchMaking(context);
             break;
+        }
         case CtsRpc::CTS_MOVE_CHARACTER:
+        {
             double x, y, z, direction;
             memcpy(&x, message.mpBodyBuffer.get(), 8);
-            memcpy(&y, message.mpBodyBuffer.get()+8, 8);
-            memcpy(&z, message.mpBodyBuffer.get()+16, 8);
-            memcpy(&direction, message.mpBodyBuffer.get()+24, 8);
-            OnMoveCharacter(context, Vector {x, y, z}, direction);
+            memcpy(&y, message.mpBodyBuffer.get() + 8, 8);
+            memcpy(&z, message.mpBodyBuffer.get() + 16, 8);
+            memcpy(&direction, message.mpBodyBuffer.get() + 24, 8);
+            OnMoveCharacter(context, Vector{x, y, z}, direction);
             break;
+        }
         case CtsRpc::CTS_NOTIFY_BATTLEGAME_PREPARED:
+        {
             OnNotifyBattleGamePrepared(context);
             break;
+        }
         case CtsRpc::CTS_NOTIFY_OWNING_CHARACTER_DESTROYED:
+        {
             OnNotifyOwningCharacterDestroyed(context);
             break;
+        }
+        case CtsRpc::CTS_SET_NICKNAME:
+        {
+            if (message.mHeaderBodySize > 24)
+            {return;}
+
+            char nicknameChars[24];
+            memset(nicknameChars, 0, 24);
+            memcpy(nicknameChars, message.mpBodyBuffer.get(), message.mHeaderBodySize);
+            OnSetNickname(context, std::string(nicknameChars, &nicknameChars[message.mHeaderBodySize]));
+            break;
+        }
+        case CtsRpc::CTS_REQUEST_MY_NICKNAME:
+        {
+            OnRequestMyNickname(context);
+            break;
+        }
     }
 }
 
@@ -61,11 +85,6 @@ void CtsRpc::OnMoveCharacter(const Context &context, const Vector& position, dou
 
     if (pGameRoom != nullptr)
     {pGameRoom->OnPlayerMove(context.GetClientId(), position, direction);}
-}
-
-void CtsRpc::OnEnterNickname(const Context &context, std::string &&nickname) const noexcept
-{
-    BattleGameServer::GetInstance().GetGameData().SetPlayerNickname(context.GetClientId(), nickname);
 }
 
 void CtsRpc::OnNotifyBattleGamePrepared(const Context &context) const noexcept
@@ -109,4 +128,26 @@ void CtsRpc::OnNotifyOwningCharacterDestroyed(const Context &context) const noex
     {return;}
 
     pHasEntityRoom->OnOwningCharacterDestroyed(context.GetClientId());
+}
+
+void CtsRpc::OnSetNickname(const Context &context, const std::string &nickname) const noexcept
+{
+    BattleGameServer::GetInstance().GetGameData().SetPlayerNickname(context.GetClientId(), nickname);
+    BattleGameServer::GetConstInstance()
+    .GetConstStcRpc()
+    .GetMyNickname(context.GetClientId(), *BattleGameServer::GetConstInstance().GetConstGameData().GetPlayerNickname(context.GetClientId()));
+}
+
+void CtsRpc::OnRequestMyNickname(const Context& context) const noexcept
+{
+    auto pClientNickname = BattleGameServer::GetConstInstance()
+    .GetConstGameData()
+    .GetPlayerNickname(context.GetClientId());
+
+    if (pClientNickname == nullptr)
+    {return;}
+
+    BattleGameServer::GetConstInstance()
+    .GetConstStcRpc()
+    .GetMyNickname(context.GetClientId(), *pClientNickname);
 }

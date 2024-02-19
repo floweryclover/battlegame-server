@@ -32,6 +32,9 @@ public:
     static constexpr int STC_RESPAWN_ENTITY = 10;
     static constexpr int STC_SET_SCORE = 11;
     static constexpr int STC_ASSIGN_TEAM_ID = 12;
+    static constexpr int STC_ASSIGN_ENTITY_NICKNAME = 13;
+    static constexpr int STC_GET_MY_NICKNAME = 14;
+    static constexpr int STC_SEND_GAME_DATA = 15;
 
     StcRpc(const StcRpc& rhs) = delete;
     StcRpc(StcRpc&& rhs) = delete;
@@ -51,6 +54,9 @@ public:
     void RespawnEntity(ClientId to, int entityId, const Vector& location, double direction) const noexcept;
     void SetScore(ClientId to, int team, int score) const noexcept;
     void AssignTeamId(ClientId to, int teamId) const noexcept;
+    void AssignEntityNickname(ClientId to, int entityId, const std::string& nickname) const noexcept;
+    void GetMyNickname(ClientId to, const std::string& nickname) const noexcept;
+    void SendGameData(ClientId to, const std::string& yourNickname, const std::string& opponentNickname) const noexcept;
 };
 
 

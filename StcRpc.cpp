@@ -104,3 +104,31 @@ void StcRpc::AssignTeamId(ClientId to, int teamId) const noexcept
     Message message(4, STC_ASSIGN_TEAM_ID, reinterpret_cast<char*>(&teamId));
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }
+
+void StcRpc::AssignEntityNickname(ClientId to, int entityId, const std::string& nickname) const noexcept
+{
+    char serialized[4+24];
+    memcpy(serialized, &entityId, 4);
+    memcpy(serialized+4, nickname.c_str(), nickname.length());
+    Message message(4+nickname.length(), STC_ASSIGN_ENTITY_NICKNAME, serialized);
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
+}
+
+void StcRpc::GetMyNickname(ClientId to, const std::string& nickname) const noexcept
+{
+    char serialized[24];
+    memcpy(serialized, nickname.c_str(), nickname.length());
+    Message message(nickname.length(), STC_GET_MY_NICKNAME, serialized);
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
+}
+
+void StcRpc::SendGameData(ClientId to, const std::string &yourNickname, const std::string &opponentNickname) const noexcept
+{
+    char serialized[4+24+4+24];
+    int yourLen = yourNickname.length();
+    int opponentLen = opponentNickname.length();
+    memcpy(serialized, &yourLen, 4);
+    memcpy(serialized+4, yourNickname.c_str(), yourLen);
+    memcpy(serialized+4+yourLen, &opponentLen, 4);
+    memcpy(serialized+4+yourLen+4, opponentNickname.c_str(), opponentLen);
+}

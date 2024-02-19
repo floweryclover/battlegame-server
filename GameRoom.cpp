@@ -130,6 +130,29 @@ void OneVsOneGameRoom::Tick() noexcept
                 .GetConstStcRpc()
                 .PossessEntity(mRedPlayer.value(), ENTITY_ID_PLAYER_RED);
 
+                auto blueNickname = *BattleGameServer::GetConstInstance().GetConstGameData().GetPlayerNickname(mBluePlayer.value());
+                auto redNickname = *BattleGameServer::GetConstInstance().GetConstGameData().GetPlayerNickname(mRedPlayer.value());
+
+                BattleGameServer::GetConstInstance()
+                .GetConstStcRpc()
+                .AssignEntityNickname(mBluePlayer.value(), ENTITY_ID_PLAYER_BLUE, blueNickname);
+                BattleGameServer::GetConstInstance()
+                .GetConstStcRpc()
+                .AssignEntityNickname(mBluePlayer.value(), ENTITY_ID_PLAYER_RED, redNickname);
+                BattleGameServer::GetConstInstance()
+                .GetConstStcRpc()
+                .AssignEntityNickname(mRedPlayer.value(), ENTITY_ID_PLAYER_BLUE, blueNickname);
+                BattleGameServer::GetConstInstance()
+                .GetConstStcRpc()
+                .AssignEntityNickname(mRedPlayer.value(), ENTITY_ID_PLAYER_RED, redNickname);
+
+                BattleGameServer::GetConstInstance()
+                .GetConstStcRpc()
+                .SendGameData(mBluePlayer.value(), blueNickname, redNickname);
+                BattleGameServer::GetConstInstance()
+                .GetConstStcRpc()
+                .SendGameData(mRedPlayer.value(), redNickname, blueNickname);
+
                 mTimePoint = std::chrono::steady_clock::now();
                 mTimeSet = std::chrono::seconds(TIME_GAME_ONE_ROUND);
                 mGameState = STATE_PLAY_GAME;
@@ -261,14 +284,14 @@ void OneVsOneGameRoom::OnPlayerMove(ClientId clientId, const Vector& location, d
             );
 }
 
-void OneVsOneGameRoom::SetRemainTimeTo(ClientId clientId, const char* text) const noexcept
+void OneVsOneGameRoom::SetRemainTimeTo(ClientId clientId, const std::string& text) const noexcept
 {
     auto remainTime = std::chrono::duration_cast<std::chrono::seconds>
             (mTimePoint+mTimeSet-std::chrono::steady_clock::now())
             .count();
     BattleGameServer::GetConstInstance()
             .GetConstStcRpc()
-            .SetTimer(clientId, remainTime, text);
+            .SetTimer(clientId, remainTime, std::string(text));
 }
 
 void OneVsOneGameRoom::OnOwningCharacterDestroyed(ClientId clientId) noexcept
