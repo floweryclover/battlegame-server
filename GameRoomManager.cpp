@@ -108,6 +108,7 @@ void GameRoomManager::StopMatchMaking(ClientId clientId)
 void GameRoomManager::OnPlayerConnected(ClientId clientId)
 {
     mRoomOfPlayers.emplace(clientId, ROOM_MAINMENU);
+    JoinPlayer(clientId, ROOM_MAINMENU);
 }
 
 void GameRoomManager::OnPlayerDisconnected(ClientId clientId)

@@ -94,9 +94,7 @@ void ClientManager::Tick()
     {
         auto& messagePair = mSendQueue.front();
         if (!IsClientExists(messagePair.first))
-        {
-            mSendQueue.pop();
-        }
+        {mSendQueue.pop();}
         else
         {
             Client& targetClient = mClients.at(messagePair.first);
@@ -114,9 +112,7 @@ void ClientManager::Tick()
                 int errorCode = errno;
                 if (errorCode != EWOULDBLOCK)
 #endif
-                {
-                    std::cerr << "[에러] 클라이언트 " << targetClient.GetClientId() << "에게 데이터를 전송하던 도중 에러가 발생하였습니다: 에러 코드" << errorCode << "." << std::endl;
-                }
+                {std::cerr << "[에러] 클라이언트 " << targetClient.GetClientId() << "에게 데이터를 전송하던 도중 에러가 발생하였습니다: 에러 코드" << errorCode << "." << std::endl;}
             }
             else if (result == 0)
             {
@@ -183,13 +179,10 @@ void ClientManager::Tick()
 void ClientManager::RequestSendMessage(MessageReliability reliability, ClientId targetClientId, Message&& message)
 {
     if (!mClients.contains(targetClientId))
-    {
-        return;
-    }
+    {return;}
+
     if (reliability == MessageReliability::RELIABLE)
-    {
-        mSendQueue.emplace(targetClientId, std::move(message));
-    }
+    {mSendQueue.emplace(targetClientId, std::move(message));}
     else
     {
         const auto& udpSocketAddress = mClients.at(targetClientId).GetTcpSocketAddress();
@@ -201,14 +194,9 @@ void ClientManager::RequestSendMessage(MessageReliability reliability, ClientId 
         {
             int errorCode = errno;
             if (errno == EWOULDBLOCK)
-            {
-                std::cerr << "[전송 에러] 클라이언트 " << targetClientId << " 에게 비신뢰성 메시지를 전송하려 했으나 Would block 상태입니다." << std::endl;
-            }
+            {std::cerr << "[전송 에러] 클라이언트 " << targetClientId << " 에게 비신뢰성 메시지를 전송하려 했으나 Would block 상태입니다." << std::endl;}
             else
-            {
-                std::cerr << "[전송 에러] 클라이언트 " << targetClientId << " 에게 비신뢰성 메시지를 전송하던 도중 에러가 발생하였습니다: " << errorCode << std::endl;
-            }
-
+            {std::cerr << "[전송 에러] 클라이언트 " << targetClientId << " 에게 비신뢰성 메시지를 전송하던 도중 에러가 발생하였습니다: " << errorCode << std::endl;}
         }
     }
 }
@@ -216,9 +204,7 @@ void ClientManager::RequestSendMessage(MessageReliability reliability, ClientId 
 bool ClientManager::KickPlayer(ClientId clientId)
 {
     if (!mClients.contains(clientId))
-    {
-        return false;
-    }
+    {return false;}
 
     mClients.at(clientId).GetTcpSocket().Shutdown();
     return true;
