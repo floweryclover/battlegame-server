@@ -29,7 +29,7 @@ void GameRoomManager::Tick()
             {
                 mMatchMakingSet.erase(playerB);
 
-                mGameRooms.emplace(mNewRoomId, std::make_unique<OneVsOneGameRoom>(mNewRoomId));
+                mGameRooms.emplace(mNewRoomId, std::make_unique<OneVsOneGameRoom>(mNewRoomId, playerA, playerB));
                 JoinPlayer(playerA, mNewRoomId);
                 JoinPlayer(playerB, mNewRoomId);
                 mNewRoomId++;

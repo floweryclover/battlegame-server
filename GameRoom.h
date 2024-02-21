@@ -78,7 +78,7 @@ public:
 class OneVsOneGameRoom : public BaseRoom, IMPLEMENTS public ITickable, public IPlayerCountable, public IHasEntity
 {
 public:
-    explicit OneVsOneGameRoom(GameRoomId roomId) noexcept;
+    explicit OneVsOneGameRoom(GameRoomId roomId, ClientId blueClientId, ClientId redClientId) noexcept;
     ~OneVsOneGameRoom() override = default;
 
     void OnPlayerJoined(ClientId clientId) noexcept override;
@@ -122,8 +122,10 @@ private:
     std::chrono::seconds mTimeSet;
     int mGameState;
 
-    std::optional<ClientId> mBluePlayer;
-    std::optional<ClientId> mRedPlayer;
+    const ClientId mBluePlayer;
+    const ClientId mRedPlayer;
+    bool mIsBlueValid;
+    bool mIsRedValid;
 
     Vector mBlueLocation;
     Vector mRedLocation;
