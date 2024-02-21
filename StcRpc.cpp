@@ -124,11 +124,14 @@ void StcRpc::GetMyNickname(ClientId to, const std::string& nickname) const noexc
 
 void StcRpc::SendGameData(ClientId to, const std::string &yourNickname, const std::string &opponentNickname) const noexcept
 {
-    char serialized[4+24+4+24];
-    int yourLen = yourNickname.length();
-    int opponentLen = opponentNickname.length();
+    char serialized[4+25+4+25];
+    int yourLen = yourNickname.length()+1;
+    int opponentLen = opponentNickname.length()+1;
     memcpy(serialized, &yourLen, 4);
     memcpy(serialized+4, yourNickname.c_str(), yourLen);
     memcpy(serialized+4+yourLen, &opponentLen, 4);
     memcpy(serialized+4+yourLen+4, opponentNickname.c_str(), opponentLen);
+
+    Message message(4+yourLen+4+opponentLen, STC_SEND_GAME_DATA, serialized);
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }
