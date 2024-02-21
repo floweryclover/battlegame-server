@@ -192,6 +192,33 @@ void OneVsOneGameRoom::Tick() noexcept
             if (!mIsBlueValid || !mIsRedValid // 누가 탈주하면 게임 바로 종료
             || mBlueScore >= 5 || mRedScore >= 5) // 5점 이상 획득한 플레이어가 있다면 종료
             {
+                if (!mIsBlueValid || !mIsRedValid)
+                {
+                    auto sendBadGameResult = [](ClientId to) {BattleGameServer::GetConstInstance()
+                    .GetConstStcRpc()
+                    .SendGameResult(to, false, false, 0, 0);};
+                    if (mIsBlueValid)
+                        sendBadGameResult(mBluePlayer);
+                    else if (mIsRedValid)
+                        sendBadGameResult(mRedPlayer);
+                }
+                else
+                {
+                    auto sendGoodGameResult = [this](ClientId to)
+                    {
+                        auto winner = mBlueScore > mRedScore ? mBluePlayer : mRedPlayer;
+                        BattleGameServer::GetConstInstance()
+                        .GetConstStcRpc()
+                        .SendGameResult(
+                                to,
+                                true,
+                                winner == to,
+                                to == mBluePlayer ? mBlueScore : mRedScore,
+                                to == mBluePlayer ? mRedScore : mBlueScore);
+                    };
+                    sendGoodGameResult(mBluePlayer);
+                    sendGoodGameResult(mRedPlayer);
+                }
                 mTimePoint = std::chrono::steady_clock::now();
                 mTimeSet = std::chrono::seconds(TIME_GAME_END);
                 mGameState = STATE_GAME_END;

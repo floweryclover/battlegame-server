@@ -35,6 +35,7 @@ public:
     static constexpr int STC_ASSIGN_ENTITY_NICKNAME = 13;
     static constexpr int STC_GET_MY_NICKNAME = 14;
     static constexpr int STC_SEND_GAME_DATA = 15;
+    static constexpr int STC_SEND_GAME_RESULT = 16;
 
     StcRpc(const StcRpc& rhs) = delete;
     StcRpc(StcRpc&& rhs) = delete;
@@ -57,6 +58,7 @@ public:
     void AssignEntityNickname(ClientId to, int entityId, const std::string& nickname) const noexcept;
     void GetMyNickname(ClientId to, const std::string& nickname) const noexcept;
     void SendGameData(ClientId to, const std::string& yourNickname, const std::string& opponentNickname) const noexcept;
+    void SendGameResult(ClientId to, bool isGoodGame, bool isWinner, int myScore, int opponentScore) const noexcept;
 };
 
 

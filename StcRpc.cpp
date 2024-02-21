@@ -135,3 +135,15 @@ void StcRpc::SendGameData(ClientId to, const std::string &yourNickname, const st
     Message message(4+yourLen+4+opponentLen, STC_SEND_GAME_DATA, serialized);
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }
+
+void StcRpc::SendGameResult(ClientId to, bool isGoodGame, bool isWinner, int myScore, int opponentScore) const noexcept
+{
+    char serialized[10];
+    memcpy(serialized, &isGoodGame, 1);
+    memcpy(serialized+1, &isWinner, 1);
+    memcpy(serialized+2, &myScore, 4);
+    memcpy(serialized+6, &opponentScore, 4);
+
+    Message message(10, STC_SEND_GAME_RESULT, serialized);
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
+}
