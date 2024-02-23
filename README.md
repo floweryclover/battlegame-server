@@ -2,6 +2,7 @@
 BattleGame 서버
 * 2학년 겨울방학 프로젝트
 * 스크린샷은 BattleGame Client(https://github.com/floweryclover/battlegame-client)참고
+  ![대충다이어그램](https://github.com/floweryclover/battlegame-server/assets/35604150/e25f13bf-13b3-4103-970a-0ab792da870a)
 
 ## 특징
 * 클라이언트랑 마찬가지로 외부 라이브러리 없이 Winsock과 linux os 함수들 사용
