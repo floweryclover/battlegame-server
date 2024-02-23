@@ -6,6 +6,7 @@
 #include <cassert>
 
 #ifdef _WIN32
+#include <ws2tcpip.h>
 #elifdef linux
 #include <arpa/inet.h>
 #endif
@@ -14,12 +15,18 @@ SocketAddress::SocketAddress() noexcept : mpRawSockAddrIn(nullptr) {}
 
 SocketAddress::SocketAddress(const char *hostIpAddress, unsigned short hostPort) noexcept
 {
+#ifdef _WIN32
+    in_addr inAddr;
+    ZeroMemory(&inAddr, sizeof(in_addr));
+#elifdef linux
     in_addr_t inAddr;
+#endif
     assert (inet_pton(AF_INET, hostIpAddress, &inAddr) != -1);
     auto pRawSockAddrIn = new struct sockaddr_in;
     memset(pRawSockAddrIn, 0, sizeof(struct sockaddr_in));
-    pRawSockAddrIn->sin_addr.s_addr = inAddr;
+    pRawSockAddrIn->sin_family = AF_INET;
     pRawSockAddrIn->sin_port = htons(hostPort);
+    pRawSockAddrIn->sin_addr = inAddr;
     mpRawSockAddrIn = std::unique_ptr<struct sockaddr_in>(pRawSockAddrIn);
 }
 

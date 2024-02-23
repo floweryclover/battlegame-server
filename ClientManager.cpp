@@ -30,10 +30,18 @@ ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenP
     mpUdpSocket = std::make_unique<Socket>(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
 
     int option = 1;
-    int result = setsockopt(mpListenSocket->GetRawHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    int result;
+#ifdef _WIN32
+    result = setsockopt(mpListenSocket->GetRawHandle(), SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&option), sizeof(option));
+    assert(result != -1);
+    result = setsockopt(mpUdpSocket->GetRawHandle(), SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char*>(&option), sizeof(option));
+    assert(result != -1);
+#elifdef linux
+    result = setsockopt(mpListenSocket->GetRawHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     assert(result != -1);
     result = setsockopt(mpUdpSocket->GetRawHandle(), SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     assert(result != -1);
+#endif
 
     SocketAddress listenSocketAddress(listenIpAddress, listenPort);
     result = bind(mpListenSocket->GetRawHandle(), reinterpret_cast<const struct sockaddr*>(&listenSocketAddress.GetRawSockAddrIn()), sizeof(struct sockaddr_in));
@@ -46,9 +54,9 @@ ClientManager::ClientManager(const char* listenIpAddress, unsigned short listenP
 
 #ifdef _WIN32
     u_long nonblockingFlag = 1;
-    result = ioctlsocket(mpListenSocket->AsHandle(), FIONBIO, &nonblockingFlag);
+    result = ioctlsocket(mpListenSocket->GetRawHandle(), FIONBIO, &nonblockingFlag);
     assert(result != -1);
-    result = ioctlsocket(mpUdpSocket->AsHandle(), FIONBIO, &nonblockingFlag);
+    result = ioctlsocket(mpUdpSocket->GetRawHandle(), FIONBIO, &nonblockingFlag);
     assert(result != -1);
 #elifdef linux
     unsigned long nonblockingFlag = 1;
@@ -79,7 +87,7 @@ void ClientManager::Tick()
     {
 #ifdef _WIN32
         u_long nonblockingFlag = 1;
-        int result = ioctlsocket(socket, FIONBIO, &nonblockingFlag);
+        int result = ioctlsocket(clientSocket.GetRawHandle(), FIONBIO, &nonblockingFlag);
 #elifdef linux
         unsigned long nonblockingFlag = 1;
         int result = ioctl(clientSocket.GetRawHandle(), FIONBIO, &nonblockingFlag);
@@ -148,8 +156,13 @@ void ClientManager::Tick()
     int result = recvfrom(mpUdpSocket->GetRawHandle(), mUdpReceiveBuffer.data(), MAX_MESSAGE_SIZE, 0, reinterpret_cast<struct sockaddr*>(&udpReceiveAddr), reinterpret_cast<socklen_t*>(&udpReceiveAddrSize));
     if (result < 0)
     {
+#ifdef _WIN32
+        int errorCode = WSAGetLastError();
+        assert(errorCode == WSAEWOULDBLOCK);
+#elifdef linux
         int errorCode = errno;
         assert(errorCode == EWOULDBLOCK);
+#endif
     }
     else
     {
@@ -192,11 +205,16 @@ void ClientManager::RequestSendMessage(MessageReliability reliability, ClientId 
         int result = sendto(mpUdpSocket->GetRawHandle(), mUdpSendBuffer.data(), 4 + 4 + message.mHeaderBodySize, 0, reinterpret_cast<const struct sockaddr*>(&udpSocketAddress.GetRawSockAddrIn()), sizeof(struct sockaddr_in));
         if (result < 0)
         {
+#ifdef _WIN32
+            int errorCode = WSAGetLastError();
+            if (errorCode == WSAEWOULDBLOCK)
+#elifdef linux
             int errorCode = errno;
-            if (errno == EWOULDBLOCK)
-            {std::cerr << "[전송 에러] 클라이언트 " << targetClientId << " 에게 비신뢰성 메시지를 전송하려 했으나 Would block 상태입니다." << std::endl;}
+            if (errorCode == EWOULDBLOCK)
+#endif
+                std::cerr << "[전송 에러] 클라이언트 " << targetClientId << " 에게 비신뢰성 메시지를 전송하려 했으나 Would block 상태입니다." << std::endl;
             else
-            {std::cerr << "[전송 에러] 클라이언트 " << targetClientId << " 에게 비신뢰성 메시지를 전송하던 도중 에러가 발생하였습니다: " << errorCode << std::endl;}
+                std::cerr << "[전송 에러] 클라이언트 " << targetClientId << " 에게 비신뢰성 메시지를 전송하던 도중 에러가 발생하였습니다: " << errorCode << std::endl;
         }
     }
 }

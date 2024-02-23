@@ -20,7 +20,7 @@ void StcRpc::DisconnectedFromGame(ClientId to) const noexcept
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }
 
-void StcRpc::SpawnEntity(ClientId to, int entityId, const Vector& location, double direction) const noexcept
+void StcRpc::SpawnEntity(ClientId to, int entityId, const Vector3D& location, double direction) const noexcept
 {
     char serialized[36];
     memcpy(serialized, &entityId, 4);
@@ -44,7 +44,7 @@ void StcRpc::PossessEntity(ClientId to, int entityId) const noexcept
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }
 
-void StcRpc::MoveEntity(ClientId to, int entityId, const Vector &location, double direction) const noexcept
+void StcRpc::MoveEntity(ClientId to, int entityId, const Vector3D &location, double direction) const noexcept
 {
     char serialized[36];
     memcpy(serialized, &entityId, 4);
@@ -77,7 +77,7 @@ void StcRpc::SignalGameState(ClientId to, int signal) const noexcept
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }
 
-void StcRpc::RespawnEntity(ClientId to, int entityId, const Vector &location, double direction) const noexcept
+void StcRpc::RespawnEntity(ClientId to, int entityId, const Vector3D &location, double direction) const noexcept
 {
     char serialized[36];
     memcpy(serialized, &entityId, 4);
@@ -145,5 +145,19 @@ void StcRpc::SendGameResult(ClientId to, bool isGoodGame, bool isWinner, int myS
     memcpy(serialized+6, &opponentScore, 4);
 
     Message message(10, STC_SEND_GAME_RESULT, serialized);
+    BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
+}
+
+void StcRpc::KnockbackEntity(ClientId to, int entityId, const Vector3D &location, const Vector2D &impulse) const noexcept
+{
+    char serialized[44];
+    memcpy(serialized, &entityId, 4);
+    memcpy(serialized+4, &location.X, 8);
+    memcpy(serialized+12, &location.Y, 8);
+    memcpy(serialized+20, &location.Z, 8);
+    memcpy(serialized+28, &impulse.X, 8);
+    memcpy(serialized+36, &impulse.Y, 8);
+
+    Message message(44, STC_KNOCKBACK_ENTITY, serialized);
     BattleGameServer::GetInstance().GetClientManager().RequestSendMessage(MessageReliability::RELIABLE, to, std::move(message));
 }

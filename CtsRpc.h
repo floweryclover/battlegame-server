@@ -21,6 +21,7 @@ public:
     static constexpr int CTS_NOTIFY_OWNING_CHARACTER_DESTROYED = 4;
     static constexpr int CTS_SET_NICKNAME = 5;
     static constexpr int CTS_REQUEST_MY_NICKNAME = 6;
+    static constexpr int CTS_BATTLE_COMMAND = 7;
 
     explicit CtsRpc() = default;
     ~CtsRpc() = default;
@@ -28,11 +29,12 @@ public:
 
 private:
     void OnRequestMatchMaking(const Context& context) const noexcept;
-    void OnMoveCharacter(const Context& context, const Vector& position, double direction) const noexcept;
+    void OnMoveCharacter(const Context& context, const Vector3D& position, double direction) const noexcept;
     void OnNotifyBattleGamePrepared(const Context& context) const noexcept;
     void OnNotifyOwningCharacterDestroyed(const Context& context) const noexcept;
     void OnSetNickname(const Context& context, const std::string& nickname) const noexcept;
     void OnRequestMyNickname(const Context& context) const noexcept;
+    void OnBattleCommand(const Context& context, int command) const noexcept;
 };
 
 

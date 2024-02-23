@@ -3,6 +3,10 @@
 #include <chrono>
 #include "BattleGameServer.h"
 
+#ifdef _WIN32
+#include <WinSock2.h>
+#include "Wsa.h"
+#endif
 int main(int argc, char* argv[])
 {
 #ifdef _WIN32

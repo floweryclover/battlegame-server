@@ -14,7 +14,7 @@ void MainMenuRoom::OnPlayerPrepared(ClientId clientId) noexcept {}
 
 // OneVsOneGameRoom 1대1 게임방
 
-const Vector OneVsOneGameRoom::CENTER_LOCATION = Vector {0, 0, 0};
+const Vector3D OneVsOneGameRoom::CENTER_LOCATION = Vector3D {0, 0, 0};
 
 OneVsOneGameRoom::OneVsOneGameRoom(GameRoomId roomId, ClientId blueClientId, ClientId redClientId) noexcept
 : BaseRoom(roomId),
@@ -26,7 +26,13 @@ mRedScore(0),
 mBluePlayer(blueClientId),
 mRedPlayer(redClientId),
 mIsBlueValid(false),
-mIsRedValid(false)
+mIsRedValid(false),
+mBlueLastCommand(0),
+mRedLastCommand(0),
+mBlueLastCommandTime(std::chrono::steady_clock::now()),
+mRedLastCommandTime(std::chrono::steady_clock::now()),
+mBlueLastDelay(std::chrono::milliseconds(0)),
+mRedLastDelay(std::chrono::milliseconds(0))
 {}
 
 void OneVsOneGameRoom::OnPlayerJoined(ClientId clientId) noexcept
@@ -116,8 +122,8 @@ void OneVsOneGameRoom::Tick() noexcept
                     return;
                 }
 
-                mBlueLocation = Vector {180,0,1000};
-                mRedLocation = Vector {-180,0,1000};
+                mBlueLocation = Vector3D {180, 0, 1000};
+                mRedLocation = Vector3D {-180, 0, 1000};
                 mBlueAngle = 180;
                 mRedAngle = 0;
                 auto spawnPlayerCharacter = [this](ClientId to, EntityId whose)
@@ -236,6 +242,21 @@ void OneVsOneGameRoom::Tick() noexcept
                 signalGameEnd(mRedPlayer);
             }
 
+            // 공격 충전 중인 플레이어가 있는 경우, 최대 차징시 자동 공격
+            auto attackIfFullCharged = [this, &currentTime](ClientId clientId)
+            {
+                bool isBlue = clientId == mBluePlayer;
+                int lastCommand = isBlue ? mBlueLastCommand : mRedLastCommand;
+                if (lastCommand != 1)
+                    return;
+
+                auto lastCommandTime = isBlue ? mBlueLastCommandTime : mRedLastCommandTime;
+                if (currentTime > lastCommandTime + std::chrono::milliseconds(1000))
+                    HandleCommand(isBlue, 2);
+            };
+            attackIfFullCharged(mBluePlayer);
+            attackIfFullCharged(mRedPlayer);
+
             // 게임 질질 끄는 것 방지.
             // 일정 시간이 지나면 중앙에서 더 가까운 사람이 1점 획득
             if (currentTime > mTimePoint + mTimeSet)
@@ -298,10 +319,10 @@ std::vector<ClientId> OneVsOneGameRoom::GetAllPlayers() const noexcept
     {return {(mIsBlueValid ? mBluePlayer : mRedPlayer)};}
 }
 
-void OneVsOneGameRoom::OnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept
+void OneVsOneGameRoom::OnEntityMove(EntityId entityId, const Vector3D& location, double direction) noexcept
 {}
 
-void OneVsOneGameRoom::OnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept
+void OneVsOneGameRoom::OnPlayerMove(ClientId clientId, const Vector3D& location, double direction) noexcept
 {
     if (!mIsBlueValid || !mIsRedValid)
     {return;}
@@ -345,7 +366,8 @@ void OneVsOneGameRoom::OnOwningCharacterDestroyed(ClientId clientId) noexcept
     EntityId destroyed = (clientId == mBluePlayer ? ENTITY_ID_PLAYER_BLUE : ENTITY_ID_PLAYER_RED);
 
     IncrementScore(clientId == mBluePlayer ? TEAM_ID_RED : TEAM_ID_BLUE);
-    RespawnPlayer(clientId == mBluePlayer ? TEAM_ID_BLUE : TEAM_ID_RED);
+    RespawnPlayer(TEAM_ID_BLUE);
+    RespawnPlayer(TEAM_ID_RED);
 
     mTimePoint = std::chrono::steady_clock::now();
     mTimeSet = std::chrono::seconds(TIME_GAME_ONE_ROUND);
@@ -382,9 +404,108 @@ void OneVsOneGameRoom::RespawnPlayer(int teamId) noexcept
                 .GetConstStcRpc()
                 .RespawnEntity(to,
                                teamId == TEAM_ID_BLUE ? ENTITY_ID_PLAYER_BLUE : ENTITY_ID_PLAYER_RED,
-                               teamId == TEAM_ID_BLUE ? (mBlueLocation = Vector {100, 0, 1000}) : (mRedLocation = Vector {-100, 0, 1000}),
+                               teamId == TEAM_ID_BLUE ? (mBlueLocation = Vector3D {100, 0, 1000}) : (mRedLocation = Vector3D {-100, 0, 1000}),
                                teamId == TEAM_ID_BLUE ? (mBlueAngle = 180) : (mRedAngle = 0));
     };
     respawnTo(mBluePlayer);
     respawnTo(mRedPlayer);
+}
+
+void OneVsOneGameRoom::OnPlayerEnterCommand(ClientId clientId, int commandId) noexcept
+{
+    if (mGameState != STATE_PLAY_GAME
+    || (clientId != mBluePlayer && clientId != mRedPlayer))
+        return;
+
+    HandleCommand(clientId == mBluePlayer, commandId);
+}
+
+void OneVsOneGameRoom::HandleCommand(bool isBlue, int commandId)
+{
+    // 알 수 없는 커맨드면 반환
+    if (commandId < 0 || commandId > 3)
+        return;
+
+    // 후딜레이 중이면 반환
+    auto currentTime = std::chrono::steady_clock::now();
+    auto& lastCommandTime = isBlue ? mBlueLastCommandTime : mRedLastCommandTime;
+    auto& lastDelay = isBlue ? mBlueLastDelay : mRedLastDelay;
+    auto& lastCommand = isBlue ? mBlueLastCommand : mRedLastCommand;
+    if (currentTime < lastCommandTime + lastDelay)
+        return;
+
+    // 참고: case에 해당하는 커맨드만이 switch에 들어올 것이 보장됨
+    switch (commandId)
+    {
+        case 0: // 커맨드 비우기
+        {
+            lastDelay = std::chrono::milliseconds(0);
+            break;
+        }
+        case 1: // 공격 충전
+        {
+            if (lastCommand == 1)
+                return;
+
+            lastDelay = std::chrono::milliseconds(0); // 공격 커맨드를 받아야 하니 딜레이 0초 주기
+            break;
+        }
+        case 2: // 공격 (0.5초 미만 충전 공격은 일반공격으로 약한 넉백, 0.5초 이상 충전 공격은 강한 넉백 충전 후 1초 경과시 자동 공격)
+        {
+            // 공격 충전 중에만 공격할 수 있음
+            if (lastCommand != 1)
+                return;
+
+            std::cout << isBlue << std::endl;
+            // 공격 범위 내에 있는지 검증
+            auto attackerLocation = isBlue ? mBlueLocation : mRedLocation;
+            auto targetLocation = isBlue ? mRedLocation : mBlueLocation;
+            double attackerAngle = isBlue ? mBlueAngle : mRedAngle;
+            double toTargetAngle =  attackerLocation.GetXyVector().GetDirectionTo(targetLocation.GetXyVector());
+            double absDeltaAngle = std::abs(toTargetAngle-attackerAngle);
+            absDeltaAngle = 360-absDeltaAngle < absDeltaAngle ? 360-absDeltaAngle : absDeltaAngle;
+            double distance = attackerLocation.DistanceTo(targetLocation);
+            if (absDeltaAngle < 30.0 && distance < 150.0)
+            {
+                auto impulse = Vector2D::FromDirection(isBlue ? mBlueAngle : mRedAngle);
+                if (currentTime > lastCommandTime + std::chrono::milliseconds(500)) // 강한 공격
+                {
+                    impulse *= 500.0;
+                }
+                else // 일반 공격
+                {
+                    impulse *= 200.0;
+                }
+
+                auto knockBackTo = [this, impulse, isBlue](ClientId to)
+                {
+                    BattleGameServer::GetConstInstance()
+                            .GetConstStcRpc()
+                            .KnockbackEntity(
+                                    to,
+                                    isBlue ? ENTITY_ID_PLAYER_RED : ENTITY_ID_PLAYER_BLUE,
+                                    isBlue ? mRedLocation : mBlueLocation,
+                                    impulse);
+                };
+                knockBackTo(mBluePlayer);
+                knockBackTo(mRedPlayer);
+            }
+
+            lastDelay = std::chrono::milliseconds(1000); // 1초의 딜레이 주기
+            break;
+        }
+        case 3: // 패링 (0.5초 지속 및 1초의 대기시간, 지속시간 내 상대방의 공격시  상대방에게 공격을 되돌려 줌)
+        {
+            // 공격 충전 중에는 패링을 할 수 없음
+            if (lastCommand == 1)
+                return;
+            // 미구현...
+
+            lastDelay = std::chrono::milliseconds(1000); // 1초의 딜레이 주기
+            break;
+        }
+    }
+
+    lastCommandTime = currentTime;
+    lastCommand = commandId;
 }

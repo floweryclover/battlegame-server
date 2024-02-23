@@ -54,14 +54,20 @@ INTERFACE IHasEntity
 {
 public:
     virtual void OnOwningCharacterDestroyed(ClientId clientId) noexcept = 0;
-    virtual void OnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept = 0;
-    virtual void OnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept = 0;
+    virtual void OnEntityMove(EntityId entityId, const Vector3D& location, double direction) noexcept = 0;
+    virtual void OnPlayerMove(ClientId clientId, const Vector3D& location, double direction) noexcept = 0;
 };
 
 INTERFACE ITickable
 {
 public:
     virtual void Tick() noexcept = 0;
+};
+
+INTERFACE ITakesCommand
+{
+public:
+    virtual void OnPlayerEnterCommand(ClientId clientId, int commandId) noexcept = 0;
 };
 
 class MainMenuRoom : public BaseRoom
@@ -75,7 +81,13 @@ public:
     void OnPlayerPrepared(ClientId clientId) noexcept override;
 };
 
-class OneVsOneGameRoom : public BaseRoom, IMPLEMENTS public ITickable, public IPlayerCountable, public IHasEntity
+class OneVsOneGameRoom
+        :public BaseRoom,
+        IMPLEMENTS
+        public ITickable,
+        public IPlayerCountable,
+        public IHasEntity,
+        public ITakesCommand
 {
 public:
     explicit OneVsOneGameRoom(GameRoomId roomId, ClientId blueClientId, ClientId redClientId) noexcept;
@@ -89,9 +101,10 @@ public:
     bool IsFull() const noexcept override;
     bool IsPlayerJoined(ClientId clientId) const noexcept override;
     std::vector<ClientId> GetAllPlayers() const noexcept override;
-    void OnEntityMove(EntityId entityId, const Vector& location, double direction) noexcept override;
-    void OnPlayerMove(ClientId clientId, const Vector& location, double direction) noexcept override;
+    void OnEntityMove(EntityId entityId, const Vector3D& location, double direction) noexcept override;
+    void OnPlayerMove(ClientId clientId, const Vector3D& location, double direction) noexcept override;
     void OnOwningCharacterDestroyed(ClientId clientId) noexcept override;
+    void OnPlayerEnterCommand(ClientId clientId, int commandId) noexcept override;
 
 private:
     static constexpr int STATE_PREPARE_GAME = 1;
@@ -110,13 +123,14 @@ private:
     static constexpr int TEAM_ID_RED = 2;
 
     static constexpr int WIN_SCORE = 5;
-    static const Vector CENTER_LOCATION;
+    static const Vector3D CENTER_LOCATION;
     int mBlueScore;
     int mRedScore;
 
     void SetRemainTimeTo(ClientId clientId, const std::string& text) const noexcept;
     void IncrementScore(int teamId) noexcept;
     void RespawnPlayer(int teamId) noexcept;
+    void HandleCommand(bool isBlue, int commandId);
 
     std::chrono::time_point<std::chrono::steady_clock> mTimePoint;
     std::chrono::seconds mTimeSet;
@@ -127,10 +141,17 @@ private:
     bool mIsBlueValid;
     bool mIsRedValid;
 
-    Vector mBlueLocation;
-    Vector mRedLocation;
+    Vector3D mBlueLocation;
+    Vector3D mRedLocation;
     double mBlueAngle;
     double mRedAngle;
+
+    std::chrono::time_point<std::chrono::steady_clock> mBlueLastCommandTime;
+    std::chrono::time_point<std::chrono::steady_clock> mRedLastCommandTime;
+    std::chrono::milliseconds mBlueLastDelay;
+    std::chrono::milliseconds mRedLastDelay;
+    int mBlueLastCommand;
+    int mRedLastCommand;
 };
 
 #endif //BATTLEGAME_SERVER_GAMEROOM_H

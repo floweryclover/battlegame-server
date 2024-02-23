@@ -26,7 +26,7 @@ void CtsRpc::HandleMessage(const Context& context, const Message& message) const
             memcpy(&y, message.mpBodyBuffer.get() + 8, 8);
             memcpy(&z, message.mpBodyBuffer.get() + 16, 8);
             memcpy(&direction, message.mpBodyBuffer.get() + 24, 8);
-            OnMoveCharacter(context, Vector{x, y, z}, direction);
+            OnMoveCharacter(context, Vector3D{x, y, z}, direction);
             break;
         }
         case CtsRpc::CTS_NOTIFY_BATTLEGAME_PREPARED:
@@ -50,6 +50,13 @@ void CtsRpc::HandleMessage(const Context& context, const Message& message) const
             OnSetNickname(context, std::string(nicknameChars, &nicknameChars[message.mHeaderBodySize]));
             break;
         }
+        case CtsRpc::CTS_BATTLE_COMMAND:
+        {
+            int command;
+            memcpy(&command, message.mpBodyBuffer.get(), 4);
+            OnBattleCommand(context, command);
+            break;
+        }
         case CtsRpc::CTS_REQUEST_MY_NICKNAME:
         {
             OnRequestMyNickname(context);
@@ -66,7 +73,7 @@ void CtsRpc::OnRequestMatchMaking(const Context& context) const noexcept
     .StartMatchMaking(context.GetClientId());
 }
 
-void CtsRpc::OnMoveCharacter(const Context &context, const Vector& position, double direction) const noexcept
+void CtsRpc::OnMoveCharacter(const Context &context, const Vector3D& position, double direction) const noexcept
 {
     auto roomIdOption = BattleGameServer::GetInstance()
     .GetGameData()
@@ -150,4 +157,24 @@ void CtsRpc::OnRequestMyNickname(const Context& context) const noexcept
     BattleGameServer::GetConstInstance()
     .GetConstStcRpc()
     .GetMyNickname(context.GetClientId(), *pClientNickname);
+}
+
+void CtsRpc::OnBattleCommand(const Context &context, int command) const noexcept
+{
+    auto gameRoomOption = BattleGameServer::GetInstance().GetConstGameData().GetConstGameRoomManager().GetPlayerJoinedRoomId(context.GetClientId());
+    if (!gameRoomOption.has_value())
+        return;
+
+    auto pBaseRoom = BattleGameServer::GetInstance()
+            .GetGameData()
+            .GetGameRoomManager()
+            .GetGameRoom(gameRoomOption.value());
+    if (pBaseRoom == nullptr)
+        return;
+
+    auto pTakesCommandRoom = dynamic_cast<ITakesCommand*>(pBaseRoom);
+    if (pTakesCommandRoom == nullptr)
+        return;
+
+    pTakesCommandRoom->OnPlayerEnterCommand(context.GetClientId(), command);
 }

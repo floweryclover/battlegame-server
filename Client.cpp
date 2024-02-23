@@ -65,8 +65,13 @@ std::expected<std::optional<std::unique_ptr<Message>>, std::optional<ErrorCode>>
     int result = recv(GetTcpSocket().GetRawHandle(), mReceiveBuffer.data() + mCurrentReceived, sizeToReceive, 0);
     if (result == -1)
     {
+#ifdef _WIN32
+        int errorCode = WSAGetLastError();
+        if (errorCode == WSAEWOULDBLOCK)
+#elifdef linux
         int errorCode = errno;
         if (errorCode == EWOULDBLOCK)
+#endif
         {
             return std::nullopt;
         }
